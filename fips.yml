@@ -1,0 +1,15 @@
+#
+# sokol-viewer
+#
+---
+policies:
+  no_auto_import: true
+imports:
+  sokol:
+    git: https://github.com/fabiopolimeni/sokol
+  fips-imgui:
+    git: https://github.com/fips-libs/fips-imgui.git
+  fips-mathc:
+    git: https://github.com/fabiopolimeni/fips-mathc.git
+  fips-tinyobjloader-c:
+    git: https://github.com/fabiopolimeni/fips-tinyobjloader-c.git

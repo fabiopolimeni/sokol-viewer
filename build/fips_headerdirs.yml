@@ -1,0 +1,35 @@
+---
+glfw3:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-glfw/."
+    - "E:/Projects/fips-glfw/glfw/src"
+    - "E:/Projects/fips-glfw/glfw/include"
+imgui:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/fips-imgui/imgui"
+sokol:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/sokol"
+    - "E:/Projects/sokol/util"
+sokol-noentry:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/sokol"
+    - "E:/Projects/sokol/util"
+dbgui:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/sokol"
+    - "E:/Projects/sokol/util"
+clear-sapp:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/sokol"
+    - "E:/Projects/sokol/util"
+clear-sapp-ui:
+    - "E:/Projects/fips-glfw/glfw/include"
+    - "E:/Projects/fips-imgui/imgui"
+    - "E:/Projects/sokol"
+    - "E:/Projects/sokol/util"
