@@ -1,8 +1,0 @@
----
-glfw3 : lib
-imgui : lib
-sokol : lib
-sokol-noentry : lib
-dbgui : lib
-clear-sapp : app
-clear-sapp-ui : app
