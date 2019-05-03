@@ -1,4 +1,8 @@
 .vscode/
+*.code-workspace
+
+build
+
 *.swp
 #>fips
 # this area is managed by fips, do not edit
