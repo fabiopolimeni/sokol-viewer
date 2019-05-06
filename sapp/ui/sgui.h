@@ -2,6 +2,13 @@
 /*
     The typical debug UI overlay useful for most sokol-app samples
 */
+#include "sokol_app.h"
+
+#define SGUI_MAX_DESCRIPTORS 16
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 typedef void (*sgui_cb)();
 
@@ -12,17 +19,9 @@ typedef struct {
     sgui_cb draw_cb;
 } sgui_desc_t;
 
-#define SGUI_MAX_DESCRIPTORS 16
-
-#include "sokol_app.h"
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs);
-void sgui_shutdown(void);
-void sgui_draw(void);
+void sgui_shutdown();
+void sgui_draw(bool show_menu);
 void sgui_event(const sapp_event* e);
 
 #if defined(__cplusplus)

@@ -58,13 +58,12 @@ void sgui_setup(
     SGUI_CALL_DESC_FUNC(init_cb)
 }
 
-void sgui_shutdown(void) {
+void sgui_shutdown() {
     SGUI_CALL_DESC_FUNC(shutdown_cb)
     simgui_shutdown();
 }
 
-void sgui_draw(void) {
-    simgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
+void sgui_draw_menu() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Viewer")) {
             bool exit_app = false;
@@ -79,6 +78,14 @@ void sgui_draw(void) {
         SGUI_CALL_DESC_FUNC(menu_cb)
         
         ImGui::EndMainMenuBar();
+    }
+}
+
+void sgui_draw(bool show_menu) {
+    simgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
+
+    if (show_menu) {
+        sgui_draw_menu();
     }
     
     SGUI_CALL_DESC_FUNC(draw_cb)

@@ -10,16 +10,24 @@
 #include "ui/sgui.h"
 #include "ui/sgui_gfx.h"
 
-#include "viewer-log.h"
+#include "viewer_log.h"
+#include "mathc.h"
 
 #define MSAA_SAMPLES 1
 
-typedef struct {
-    sg_buffer vbuf;
-    sg_buffer ibuf;
-} mesh_t;
-
 static sg_pass_action pass_action;
+
+typedef struct {
+    uint8_t show_menu: 1;
+    uint8_t show_ui: 1;
+    uint8_t msaa_samples: 4;
+} app_state_t;
+
+static app_state_t app_state = {
+    .show_menu = true,
+    .show_ui = true,
+    .msaa_samples = MSAA_SAMPLES
+};
 
 void init(void) {
     sg_setup(&(sg_desc) {
@@ -48,12 +56,26 @@ void init(void) {
         NULL
     };
 
-    sgui_setup(MSAA_SAMPLES, sapp_dpi_scale(), sgui_descs);
+    sgui_setup(app_state.msaa_samples, sapp_dpi_scale(), sgui_descs);
 }
 
 void event(const sapp_event* ev) {
-    if (ev->key_code == SAPP_KEYCODE_ESCAPE) {
+    // Exit application
+    if ((ev->key_code == SAPP_KEYCODE_ESCAPE)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
         exit(EXIT_SUCCESS);
+    }
+
+    // Toggle menu visibility
+    if (ev->modifiers & SAPP_MODIFIER_ALT) {
+        app_state.show_menu = !app_state.show_menu;
+    }
+
+    // Toggle UI visibility
+    if ((ev->key_code == SAPP_KEYCODE_G)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
+        && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
+        app_state.show_ui = !app_state.show_ui;
     }
 
     sgui_event(ev);
@@ -61,7 +83,11 @@ void event(const sapp_event* ev) {
 
 void frame(void) {
     sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
-    sgui_draw();
+
+    if (app_state.show_ui) {
+        sgui_draw(app_state.show_menu);
+    }
+
     sg_end_pass();
     sg_commit();
 }
@@ -72,7 +98,7 @@ void cleanup(void) {
 }
 
 void fail(const char* msg) {
-    VIEWER_LOG_ERROR("FAIL: %s", msg);
+    LOG_ERROR("FAIL: %s", msg);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
