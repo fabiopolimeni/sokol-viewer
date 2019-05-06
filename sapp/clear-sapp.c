@@ -3,7 +3,7 @@
 //------------------------------------------------------------------------------
 #include "sokol_gfx.h"
 #include "sokol_app.h"
-#include "ui/dbgui.h"
+#include "ui/sgui.h"
 
 static sg_pass_action pass_action;
 
@@ -29,20 +29,20 @@ void init(void) {
         }
     };
 
-    __dbgui_setup(1, sapp_dpi_scale());
+    sgui_setup(1, sapp_dpi_scale());
 }
 
 void frame(void) {
     float g = pass_action.colors[0].val[1] + 0.01f;
     pass_action.colors[0].val[1] = (g > 1.0f) ? 0.0f : g;
     sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
-    __dbgui_draw();
+    sgui_draw();
     sg_end_pass();
     sg_commit();
 }
 
 void cleanup(void) {
-    __dbgui_shutdown();
+    sgui_shutdown();
     sg_shutdown();
 }
 
@@ -51,7 +51,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
-        .event_cb = __dbgui_event,
+        .event_cb = sgui_event,
         .width = 1024,
         .height = 768,
         .high_dpi = true,

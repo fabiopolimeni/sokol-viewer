@@ -6,7 +6,7 @@
 #include "sokol_args.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
-#include "ui/dbgui.h"
+#include "ui/sgui.h"
 #include "viewer-log.h"
 
 typedef struct {
@@ -34,33 +34,30 @@ void init(void) {
     pass_action = (sg_pass_action) {
         .colors[0] = { 
             .action=SG_ACTION_CLEAR,
-            .val={1.0f, 0.0f, 0.0f, 1.0f}
+            .val={0.6f, 0.8f, 0.0f, 1.0f}
         }
     };
 
-    __dbgui_setup(1, sapp_dpi_scale());
+    sgui_setup(1, sapp_dpi_scale());
 }
 
 void event(const sapp_event* ev) {
-
     if (ev->key_code == SAPP_KEYCODE_ESCAPE) {
         exit(EXIT_SUCCESS);
     }
 
-    __dbgui_event(ev);
+    sgui_event(ev);
 }
 
 void frame(void) {
-    float g = pass_action.colors[0].val[1] + 0.01f;
-    pass_action.colors[0].val[1] = (g > 1.0f) ? 0.0f : g;
     sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
-    __dbgui_draw();
+    sgui_draw();
     sg_end_pass();
     sg_commit();
 }
 
 void cleanup(void) {
-    __dbgui_shutdown();
+    sgui_shutdown();
     sg_shutdown();
 }
 
@@ -69,7 +66,7 @@ void fail(const char* msg) {
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    return (sapp_desc){
+    return (sapp_desc) {
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
