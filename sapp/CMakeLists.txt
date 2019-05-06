@@ -22,18 +22,11 @@ add_subdirectory(sokol)
 add_subdirectory(ui)
 add_subdirectory(tinyobjloader)
 
-fips_begin_app(viewer-sapp windowed)
-    fips_vs_warning_level(3)
-    fips_files(viewer-sapp.c)
-    fips_deps(sokol tinyobjloader mathc)
-fips_end_app()
-
 #-------------------------------------------------------------------------------
-#   The same samples, but with debugging UI
+#   The viewer app with UI
 #
 fips_begin_app(viewer-sapp-ui windowed)
     fips_vs_warning_level(3)
     fips_files(viewer-sapp.c)
-    fips_deps(sokol tinyobjloader mathc imgui dbgui)
+    fips_deps(sokol tinyobjloader mathc imgui sgui)
 fips_end_app()
-target_compile_definitions(viewer-sapp-ui PRIVATE USE_DBG_UI)

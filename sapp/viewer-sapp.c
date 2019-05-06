@@ -6,8 +6,13 @@
 #include "sokol_args.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
+
 #include "ui/sgui.h"
+#include "ui/sgui_gfx.h"
+
 #include "viewer-log.h"
+
+#define MSAA_SAMPLES 1
 
 typedef struct {
     sg_buffer vbuf;
@@ -30,15 +35,20 @@ void init(void) {
         .d3d11_depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view
     #endif
     });
-    
+
     pass_action = (sg_pass_action) {
         .colors[0] = { 
             .action=SG_ACTION_CLEAR,
             .val={0.6f, 0.8f, 0.0f, 1.0f}
         }
     };
+    
+    const sgui_desc_t* sgui_descs[] = {
+        sgui_gfx_get(),
+        NULL
+    };
 
-    sgui_setup(1, sapp_dpi_scale());
+    sgui_setup(MSAA_SAMPLES, sapp_dpi_scale(), sgui_descs);
 }
 
 void event(const sapp_event* ev) {
@@ -62,7 +72,7 @@ void cleanup(void) {
 }
 
 void fail(const char* msg) {
-    VIEWER_LOG_ERROR("ERROR: %s", msg);
+    VIEWER_LOG_ERROR("FAIL: %s", msg);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -72,10 +82,10 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = cleanup,
         .event_cb = event,
         .fail_cb = fail,
-        .width = 1024,
-        .height = 768,
+        .width = 800,
+        .height = 540,
         .high_dpi = true,
         .gl_force_gles2 = false,
-        .window_title = "Voxel Viewer (sokol app)",
+        .window_title = "Viewer (sokol app)",
     };
 }

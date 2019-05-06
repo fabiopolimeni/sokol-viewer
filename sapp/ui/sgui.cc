@@ -1,35 +1,66 @@
 //------------------------------------------------------------------------------
-//  dbgui.cc
+//  sgui.cc
 //  Implementation file for the generic debug UI overlay, using 
 //  the sokol_imgui.h utility header which implements the Dear ImGui
 //  glue code.
 //------------------------------------------------------------------------------
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
-#define SOKOL_GFX_IMGUI_IMPL
-#include "sokol_gfx_imgui.h"
+
+#include "sgui.h"
 
 extern "C" {
 
-static sg_imgui_t sg_imgui;
+static sgui_desc_t sgui_descs[SGUI_MAX_DESCRIPTORS] = {0};
+static size_t sgui_desc_count = 0;
 
-void sgui_setup(int sample_count, float dpi_scale) {
-    // setup debug inspection header(s)
-    sg_imgui_init(&sg_imgui);
-    
+#define SGUI_CALL_DESC_FUNC(funcName) {\
+for(size_t i = 0; i < sgui_desc_count; ++i) {\
+    const sgui_desc_t* desc = &sgui_descs[i];\
+    if (desc->funcName)\
+        desc->funcName();\
+}}
+
+void sgui_setup(
+    int sample_count, float dpi_scale, const sgui_desc_t** descs) {    
     // setup the sokol-imgui utility header
     simgui_desc_t simgui_desc = { };
     simgui_desc.sample_count = sample_count;
     simgui_desc.dpi_scale = dpi_scale;
     simgui_setup(&simgui_desc);
+
+    fprintf(stdout, "SGUI: Init (samples=%d, scale=%.2f)\n",
+        sample_count, dpi_scale);
+
+    if (descs == NULL) {
+        return;
+    }
+
+    // copy descriptors into global registers
+    sgui_desc_count = 0;
+    for (sgui_desc_count = 0;
+        sgui_desc_count < SGUI_MAX_DESCRIPTORS; ++sgui_desc_count) {
+        // break if encounter a null descriptor
+        if (descs[sgui_desc_count] == NULL) {
+            break;
+        }
+
+        sgui_descs[sgui_desc_count] = *(descs[sgui_desc_count]);
+    }
+
+    fprintf(stdout, "SGUI: Added %lld sgui_desc_t\n", sgui_desc_count);
+    SGUI_CALL_DESC_FUNC(init_cb)
 }
 
 void sgui_shutdown(void) {
+    SGUI_CALL_DESC_FUNC(shutdown_cb)
     simgui_shutdown();
-    sg_imgui_discard(&sg_imgui);
 }
 
 void sgui_draw(void) {
@@ -45,21 +76,12 @@ void sgui_draw(void) {
             }
         }
 
-        if (ImGui::BeginMenu("Sokol")) {
-            if (ImGui::BeginMenu("Graphics")) {
-                ImGui::MenuItem("Buffers", 0, &sg_imgui.buffers.open);
-                ImGui::MenuItem("Images", 0, &sg_imgui.images.open);
-                ImGui::MenuItem("Shaders", 0, &sg_imgui.shaders.open);
-                ImGui::MenuItem("Pipelines", 0, &sg_imgui.pipelines.open);
-                ImGui::MenuItem("Passes", 0, &sg_imgui.passes.open);
-                ImGui::MenuItem("Calls", 0, &sg_imgui.capture.open);
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenu();
-        }
+        SGUI_CALL_DESC_FUNC(menu_cb)
+        
         ImGui::EndMainMenuBar();
     }
-    sg_imgui_draw(&sg_imgui);
+    
+    SGUI_CALL_DESC_FUNC(draw_cb)
     simgui_render();
 }
 
