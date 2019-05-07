@@ -27,6 +27,9 @@ add_subdirectory(tinyobjloader)
 #
 fips_begin_app(viewer-sapp-ui windowed)
     fips_vs_warning_level(3)
-    fips_files(viewer_main.c viewer_scene.c)
+    fips_files(
+        viewer_main.c
+        viewer_renderer.c
+        viewer_scene.c)
     fips_deps(sokol tinyobjloader mathc imgui sgui)
 fips_end_app()

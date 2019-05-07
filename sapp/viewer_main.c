@@ -11,23 +11,26 @@
 #include "ui/sgui_gfx.h"
 
 #include "viewer_log.h"
-#include "mathc.h"
+#include "viewer_math.h"
+#include "viewer_renderer.h"
+#include "viewer_scene.h"
 
 #define MSAA_SAMPLES 1
-
-static sg_pass_action pass_action;
 
 typedef struct {
     uint8_t show_menu: 1;
     uint8_t show_ui: 1;
     uint8_t msaa_samples: 4;
-} app_state_t;
+} app_t;
 
-static app_state_t app_state = {
+static app_t app = {
     .show_menu = true,
     .show_ui = true,
     .msaa_samples = MSAA_SAMPLES
 };
+
+static renderer_t renderer = {0};
+static scene_t scene = {0};
 
 void init(void) {
     sg_setup(&(sg_desc) {
@@ -44,7 +47,7 @@ void init(void) {
     #endif
     });
 
-    pass_action = (sg_pass_action) {
+    renderer.pass_action = (sg_pass_action) {
         .colors[0] = { 
             .action=SG_ACTION_CLEAR,
             .val={0.6f, 0.8f, 0.0f, 1.0f}
@@ -56,7 +59,20 @@ void init(void) {
         NULL
     };
 
-    sgui_setup(app_state.msaa_samples, sapp_dpi_scale(), sgui_descs);
+    sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
+}
+
+void frame(void) {
+    sg_begin_default_pass(
+        &renderer.pass_action,
+        sapp_width(), sapp_height());
+
+    if (app.show_ui) {
+        sgui_draw(app.show_menu);
+    }
+
+    sg_end_pass();
+    sg_commit();
 }
 
 void event(const sapp_event* ev) {
@@ -68,28 +84,17 @@ void event(const sapp_event* ev) {
 
     // Toggle menu visibility
     if (ev->modifiers & SAPP_MODIFIER_ALT) {
-        app_state.show_menu = !app_state.show_menu;
+        app.show_menu = !app.show_menu;
     }
 
     // Toggle UI visibility
     if ((ev->key_code == SAPP_KEYCODE_G)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
         && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
-        app_state.show_ui = !app_state.show_ui;
+        app.show_ui = !app.show_ui;
     }
 
     sgui_event(ev);
-}
-
-void frame(void) {
-    sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
-
-    if (app_state.show_ui) {
-        sgui_draw(app_state.show_menu);
-    }
-
-    sg_end_pass();
-    sg_commit();
 }
 
 void cleanup(void) {
