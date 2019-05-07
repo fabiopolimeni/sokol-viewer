@@ -14,6 +14,7 @@
 #include "viewer_math.h"
 #include "viewer_renderer.h"
 #include "viewer_scene.h"
+#include "viewer_shaders.h"
 
 #define MSAA_SAMPLES 1
 
@@ -29,8 +30,193 @@ static app_t app = {
     .msaa_samples = MSAA_SAMPLES
 };
 
+#define BUFFER_VERTEX_INDEX 0
+#define BUFFER_INSTANCE_INDEX 1
+
 static renderer_t renderer = {0};
 static scene_t scene = {0};
+static group_id_t cubes_group;
+
+#define MAX_CUBE_INSTANCES 3
+static mesh_t cube_mesh = {0};
+static material_t cube_mat = {0};
+static instance_id_t cube_instances[MAX_CUBE_INSTANCES];
+
+/* create a checkerboard texture */
+static uint32_t checkerboard_pixels[4*4] = {
+    0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
+    0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF,
+    0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
+    0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF,
+};
+
+static inline uint32_t xorshift32(void) {
+    static uint32_t x = 0x12345678;
+    x ^= x<<13;
+    x ^= x>>17;
+    x ^= x<<5;
+    return x;
+}
+
+static inline float rnd(float min_val, float max_val) {
+    return ((((float)(xorshift32() & 0xFFFF)) / 0x10000)
+        * (max_val - min_val)) + min_val;
+}
+
+static void setup_scene() {
+    const int w = sapp_width();
+    const int h = sapp_height();
+
+    scene.camera.proj = smat4_perspective_fov(
+        45.0f, (float)w, (float)h, 0.01f, 100.0f);
+    scene.camera.view = smat4_look_at(
+        (vec3f_t){0.f, 0.f, 30.f},
+        (vec3f_t){0.f, 0.f, 0.f},
+        (vec3f_t){0.f, 1.f, 0.f});
+    scene.transform = smat4_identity();
+    scene.light.plane = (vec4f_t){-1.f, -1.f, 0.f, 0.f};
+
+    // Create the cube scene group
+    cube_mesh = mesh_make_cube();
+    cube_mat.albedo = sg_make_image(&(sg_image_desc){
+        .width = 4,
+        .height = 4,
+        .content.subimage[0][0] = {
+            .ptr = checkerboard_pixels,
+            .size = sizeof(checkerboard_pixels)
+        },
+        .label = "checkerboard-texture"
+    });
+
+    cubes_group = scene_create_group(&scene, cube_mesh, cube_mat);
+
+    // Create several cube instances
+    for (int32_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
+        cube_instances[i] = scene_add_instance(
+            &scene, cubes_group, smat4_identity(), (vec4f_t) {
+                .x = rnd(0.0f, 1.0f),
+                .y = rnd(0.0f, 1.0f),
+                .z = rnd(0.0f, 1.0f),
+                .w = 1.0f
+            });
+    }
+}
+
+static void setup_renderer() {
+    renderer.pass_action = (sg_pass_action) {
+        .colors[0] = { 
+            .action=SG_ACTION_CLEAR,
+            .val={0.6f, 0.8f, 0.0f, 1.0f}
+        }
+    };
+
+    renderer.shader = sg_make_shader(&(sg_shader_desc) {
+        .attrs = {
+            [0] = { .name="vertex_pos", .sem_name="POSITION" },
+            [1] = { .name="vertex_norm", .sem_name="NORMAL" },
+            [2] = { .name="vertex_uv", .sem_name="UV" },
+            [3] = { .name="instance_color", .sem_name="COLOR" },
+            [4] = { .name="instance_pose", .sem_name="POSE" }
+        },
+        .vs = {
+            .uniform_blocks[0] = {
+                .size = sizeof(scene.camera)
+                    + sizeof(scene.transform)
+                    + sizeof(scene.light),
+                .uniforms = {
+                    [0] = { .name="camera_proj", .type=SG_UNIFORMTYPE_MAT4 },
+                    [1] = { .name="camera_view", .type=SG_UNIFORMTYPE_MAT4 },
+                    [2] = { .name="scene_model", .type=SG_UNIFORMTYPE_MAT4 },
+                    [3] = { .name="light", .type=SG_UNIFORMTYPE_FLOAT4 },
+                }
+            },
+            .source = vs_src
+        },
+        .fs = {
+            .images[0] = { .name="albedo_tex", .type = SG_IMAGETYPE_2D },
+            .source = fs_src
+        },
+        .label = "phong-instancing-shader"
+    });
+
+    renderer.bindings = (sg_bindings) {
+        /* mesh vertex and index buffers */
+        .vertex_buffers[BUFFER_VERTEX_INDEX] = cube_mesh.vbuf,
+        .index_buffer = cube_mesh.ibuf,
+    
+        /* instance buffer goes into vertex-buffer-slot */
+        .vertex_buffers[BUFFER_INSTANCE_INDEX] =
+            sg_make_buffer(&(sg_buffer_desc) {
+                .size = MAX_CUBE_INSTANCES * sizeof(instance_t),
+                .usage = SG_USAGE_STREAM,
+                .label = "instance-data"
+        })
+    };
+
+    renderer.pipeline = sg_make_pipeline(&(sg_pipeline_desc) {
+        .shader = renderer.shader,
+        .layout = {
+            .buffers[BUFFER_VERTEX_INDEX].step_func = SG_VERTEXSTEP_PER_VERTEX,
+            .buffers[BUFFER_INSTANCE_INDEX].step_func = SG_VERTEXSTEP_PER_INSTANCE,
+            .attrs = {
+                [0] = {
+                    .offset = offsetof(vertex_t, pos),
+                    .format = SG_VERTEXFORMAT_FLOAT3,
+                    .buffer_index = BUFFER_VERTEX_INDEX
+                },
+                [1] = {
+                    .offset = offsetof(vertex_t, norm),
+                    .format = SG_VERTEXFORMAT_FLOAT3,
+                    .buffer_index = BUFFER_VERTEX_INDEX
+                },
+                [2] = {
+                    .offset = offsetof(vertex_t, uv),
+                    .format = SG_VERTEXFORMAT_FLOAT2,
+                    .buffer_index = BUFFER_VERTEX_INDEX
+                },
+                [3] = {
+                    .offset = offsetof(instance_t, color),
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                    .buffer_index = BUFFER_INSTANCE_INDEX
+                },
+                // 4x4 matrices will span 4 attribute slots
+                [4] = {
+                    .offset = offsetof(instance_t, pose),
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                    .buffer_index = BUFFER_INSTANCE_INDEX
+                },
+                [5] = {
+                    .offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 4),
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                    .buffer_index = BUFFER_INSTANCE_INDEX
+                },
+                [6] = {
+                    .offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 8),
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                    .buffer_index = BUFFER_INSTANCE_INDEX
+                },
+                [7] = {
+                    .offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 12),
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                    .buffer_index = BUFFER_INSTANCE_INDEX
+                }
+            }
+        },
+        .index_type = SG_INDEXTYPE_UINT16,
+        .depth_stencil = {
+            .depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL,
+            .depth_write_enabled = true,
+        },
+        .blend = {
+            .depth_format = SG_PIXELFORMAT_DEPTH,
+        },
+        .rasterizer = {
+            .cull_mode = SG_CULLMODE_BACK,
+            .sample_count = app.msaa_samples
+        },
+        .label = "phong-instancing-pipeline"
+    });
+}
 
 void init(void) {
     sg_setup(&(sg_desc) {
@@ -47,13 +233,10 @@ void init(void) {
     #endif
     });
 
-    renderer.pass_action = (sg_pass_action) {
-        .colors[0] = { 
-            .action=SG_ACTION_CLEAR,
-            .val={0.6f, 0.8f, 0.0f, 1.0f}
-        }
-    };
-    
+    // Init graphics resources and params
+    setup_scene();
+    setup_renderer();
+
     const sgui_desc_t* sgui_descs[] = {
         sgui_gfx_get(),
         NULL

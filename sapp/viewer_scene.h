@@ -15,8 +15,8 @@ extern "C" {
 
 /* state struct for the 3D object */
 typedef struct {
-    mat4f_t pose;
     vec4f_t color;
+    mat4f_t pose;
 } instance_t;
 
 typedef struct { int32_t id; } group_id_t;
@@ -39,7 +39,7 @@ typedef struct {
 
 typedef struct {
     group_t groups[SCENE_MAX_GROUPS];
-    mat4f_t model;
+    mat4f_t transform;
     camera_t camera;
     light_t light;
 } scene_t;

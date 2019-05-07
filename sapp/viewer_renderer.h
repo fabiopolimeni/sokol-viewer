@@ -29,8 +29,9 @@ typedef struct {
 
 typedef struct {
     sg_pass_action pass_action;
-    sg_pipeline pipeline;
     sg_shader shader;
+    sg_bindings bindings;
+    sg_pipeline pipeline;
 } renderer_t;
 
 mesh_t mesh_make_cube();
