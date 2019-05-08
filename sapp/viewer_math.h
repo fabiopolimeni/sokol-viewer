@@ -18,3 +18,5 @@ typedef struct vec4 vec4f_t;
 typedef struct mat2 mat2f_t;
 typedef struct mat3 mat3f_t;
 typedef struct mat4 mat4f_t;
+
+typedef struct quat quat_t;

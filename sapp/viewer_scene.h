@@ -2,35 +2,38 @@
 /**
  * Define all necessary structure and function, which operate on 3D model space.
  */
+
+#include "viewer_handle.h"
 #include "viewer_renderer.h"
 #include "viewer_math.h"
 
-#define SCENE_MAX_INSTANCES 64  // Max number of instances per group
 #define SCENE_MAX_GROUPS 16     // Max number of groups per scene
-#define SCENE_INVALID_ID (-1)
+#define SCENE_MAX_NODES 128     // Max number of objects per scene
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-/* state struct for the 3D object */
-typedef struct {
-    vec4f_t color;
-    mat4f_t pose;
-} instance_t;
-
-typedef struct { int32_t id; } group_id_t;
-typedef struct { int32_t id; } instance_id_t;
-
 typedef struct {
     mesh_t mesh;
     material_t mat;
-    instance_t instances[SCENE_MAX_INSTANCES];
-} group_t;
+    vec4f_t color;
+} model_t;
+
+typedef struct handle_t node_id_t;
 
 typedef struct {
-    mat4f_t proj;
-    mat4f_t view;
+    mat4f_t transform;
+    model_t model;
+    node_id_t parent_id;
+} node_t;
+
+typedef struct {
+    vec3f_t target;
+    vec3f_t eye_pos;
+    mfloat_t fov;
+    mfloat_t near_plane;
+    mfloat_t far_plane;
 } camera_t;
 
 typedef struct {
@@ -39,9 +42,11 @@ typedef struct {
 
 typedef struct {
     group_t groups[SCENE_MAX_GROUPS];
-    mat4f_t transform;
+
+    node_t nodes[SCENE_MAX_NODES];
     camera_t camera;
     light_t light;
+    mat4f_t root;
 } scene_t;
 
 group_id_t scene_create_group(scene_t* scene, mesh_t mesh, material_t mat);

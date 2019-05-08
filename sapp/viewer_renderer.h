@@ -4,6 +4,9 @@
  */
 #include "sokol_gfx.h"
 #include "viewer_math.h"
+#include "viewer_handle.h"
+
+#define RENDERER_MAX_INSTANCES 64  // Max number of instances per group
 
 #if defined(__cplusplus)
 extern "C" {
@@ -20,12 +23,34 @@ typedef struct {
 typedef struct {
     sg_buffer vbuf;
     sg_buffer ibuf;
-    size_t num_elements;
+    int32_t num_elements;
 } mesh_t;
 
 typedef struct {
     sg_image albedo;
 } material_t;
+
+/* state struct for the 3D object */
+typedef struct {
+    vec4f_t color;
+    mat4f_t pose;
+    mat4f_t normal;
+} instance_t;
+
+typedef struct handle_t group_id_t;
+typedef struct handle_t instance_id_t;
+
+typedef struct {
+    mesh_t mesh;
+    material_t mat;
+    instance_t instances[RENDERER_MAX_INSTANCES];
+} group_t;
+
+typedef struct {
+    mat4f_t view_proj;
+    vec4f_t light;
+    vec3f_t eye_pos;
+} uniforms_t;
 
 typedef struct {
     sg_pass_action pass_action;

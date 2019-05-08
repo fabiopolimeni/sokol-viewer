@@ -22,7 +22,7 @@ group_id_t scene_create_group(scene_t* scene, mesh_t mesh, material_t mat) {
     
     // No available slot
     return (group_id_t) {
-        .id = SCENE_INVALID_ID
+        .id = HANDLE_INVALID_ID
     };
 }
 
@@ -43,7 +43,7 @@ instance_id_t scene_add_instance(scene_t* scene,
 
         // Iterate through all group instances, and if
         // one is empty, return it as the available one.
-        for (int32_t i = 0; i < SCENE_MAX_INSTANCES; ++i) {
+        for (int32_t i = 0; i < RENDERER_MAX_INSTANCES; ++i) {
             instance_t *inst = &grp->instances[i];
             if (memcmp(inst, &empty_instance, sizeof(instance_t)) == 0) {
                 inst->color = color;
@@ -57,7 +57,7 @@ instance_id_t scene_add_instance(scene_t* scene,
     
     // No available slot
     return (instance_id_t) {
-        .id = SCENE_INVALID_ID
+        .id = HANDLE_INVALID_ID
     };
 }
 
@@ -66,7 +66,7 @@ void scene_remove_instance(scene_t* scene,
     assert(scene);
 
     if (group.id >= 0 && group.id < SCENE_MAX_GROUPS
-        && instance.id >= 0 && instance.id > SCENE_MAX_INSTANCES) {
+        && instance.id >= 0 && instance.id > RENDERER_MAX_INSTANCES) {
         instance_t *inst = &scene->groups[group.id].instances[instance.id];
         memset(inst, 0, sizeof(instance_t));
     }
