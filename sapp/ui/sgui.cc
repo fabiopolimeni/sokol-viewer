@@ -10,6 +10,7 @@
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "imgui.h"
+
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
 
@@ -27,14 +28,7 @@ for(size_t i = 0; i < sgui_desc_count; ++i) {\
         desc->funcName();\
 }}
 
-void sgui_setup(
-    int sample_count, float dpi_scale, const sgui_desc_t** descs) {    
-    // setup the sokol-imgui utility header
-    simgui_desc_t simgui_desc = { };
-    simgui_desc.sample_count = sample_count;
-    simgui_desc.dpi_scale = dpi_scale;
-    simgui_setup(&simgui_desc);
-
+void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {    
     fprintf(stdout, "SGUI: Init (samples=%d, scale=%.2f)\n",
         sample_count, dpi_scale);
 
@@ -56,11 +50,17 @@ void sgui_setup(
 
     fprintf(stdout, "SGUI: Added %lld sgui_desc_t\n", sgui_desc_count);
     SGUI_CALL_DESC_FUNC(init_cb)
+
+    // setup the sokol-imgui utility header
+    simgui_desc_t simgui_desc = { };
+    simgui_desc.sample_count = sample_count;
+    simgui_desc.dpi_scale = dpi_scale;
+    simgui_setup(&simgui_desc);
 }
 
 void sgui_shutdown() {
-    SGUI_CALL_DESC_FUNC(shutdown_cb)
     simgui_shutdown();
+    SGUI_CALL_DESC_FUNC(shutdown_cb)
 }
 
 void sgui_draw_menu() {

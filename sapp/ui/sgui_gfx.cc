@@ -1,11 +1,11 @@
-#include "sgui_gfx.h"
-
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "imgui.h"
 
 #define SOKOL_GFX_IMGUI_IMPL
 #include "sokol_gfx_imgui.h"
+
+#include "sgui_gfx.h"
 
 extern "C" {
 

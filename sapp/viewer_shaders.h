@@ -48,8 +48,7 @@ static const char* fs_src =
 "  vec3 r = reflect(-light_vec, normal);\n"
 "  float r_dot_v = max(dot(r, eye_vec), 0.0);\n"
 "  float spec = pow(r_dot_v, spec_power) * n_dot_l;"
-//"  return diff + vec3(spec,spec,spec);"
-"  return diff;\n"
+"  return diff + vec3(spec,spec,spec);"
 "}\n"
 "void main() {\n"
 "  vec3 eye_vec = normalize(world_eyepos - world_position);\n"
@@ -57,7 +56,6 @@ static const char* fs_src =
 "  vec3 light_dir = normalize(world_lightdir);\n"
 "  vec3 albedo = texture(albedo_tex, uv).xyz;\n"
 "  vec3 base_color = albedo * color.xyz;\n"
-//"  frag_color = vec4(world_eyepos, 1.0f);\n"
 "  frag_color = vec4(light(base_color, eye_vec, nrm, light_dir), 1.0);\n"
 "}\n";
 #elif defined(SOKOL_GLES3) || defined(SOKOL_GLES2)

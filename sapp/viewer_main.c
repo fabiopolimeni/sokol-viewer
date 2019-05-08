@@ -50,12 +50,12 @@ static renderer_t renderer = {0};
 static scene_t scene = {0};
 static group_id_t cubes_group;
 
-#define MAX_CUBE_INSTANCES 1
+#define MAX_CUBE_INSTANCES 5
 static mesh_t cube_mesh = {0};
 static material_t cube_mat = {0};
 static instance_id_t cube_ids[MAX_CUBE_INSTANCES];
 
-/* create a checkerboard texture */
+// create a checkerboard texture 
 static uint32_t checkerboard_pixels[4*4] = {
     0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
     0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF,
@@ -88,7 +88,7 @@ static void setup_scene() {
     scene.light.plane = (vec4f_t){-1.f, -1.f, -.4f, 0.f};
     scene.root = smat4_identity();
 
-    // Create the cube scene group
+    // create the cube scene group
     cube_mesh = mesh_make_cube();
     cube_mat.albedo = sg_make_image(&(sg_image_desc){
         .width = 4,
@@ -102,11 +102,11 @@ static void setup_scene() {
 
     cubes_group = scene_create_group(&scene, cube_mesh, cube_mat);
 
-    // Create several cube instances
+    // create several cube instances
     for (int32_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
         mat4f_t pose = smat4_translate(smat4_identity(), 
             (vec3f_t) {
-                .x = rnd(-3.0f, 3.0f),
+                .x = rnd(-6.0f, 6.0f),
                 .y = rnd(-3.0f, 3.0f),
                 .z = rnd(-3.0f, 3.0f)
             });
@@ -161,11 +161,11 @@ static void setup_renderer() {
     });
 
     renderer.bindings = (sg_bindings) {
-        /* mesh vertex and index buffers */
+        // mesh vertex and index buffers
         .vertex_buffers[BUFFER_INDEX_VERTEX] = cube_mesh.vbuf,
         .index_buffer = cube_mesh.ibuf,
     
-        /* instance buffer goes into vertex-buffer-slot */
+        // instance buffer goes into vertex-buffer-slot 
         .vertex_buffers[BUFFER_INDEX_INSTANCE] =
             sg_make_buffer(&(sg_buffer_desc) {
                 .size = MAX_CUBE_INSTANCES * sizeof(instance_t),
@@ -173,7 +173,7 @@ static void setup_renderer() {
                 .label = "instance-data"
         }),
 
-        /* sampler bindings */
+        // sampler bindings 
         .fs_images[SAMPLER_INDEX_ALBEDO] = cube_mat.albedo
     };
 
@@ -217,7 +217,7 @@ static void setup_renderer() {
 
 void update_scene() {
     
-    /* @todo: update scene params */
+    // @todo: update scene params 
 }
 
 void render_scene() {
@@ -238,7 +238,7 @@ void render_scene() {
         .eye_pos = scene.camera.eye_pos
     };
 
-    /* update instance model, and normal, matrices */
+    // update instance model, and normal, matrices 
     instance_t instances[MAX_CUBE_INSTANCES] = {0};
     const group_t* cubes = &scene.groups[cubes_group.id];
     for (size_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
@@ -249,18 +249,18 @@ void render_scene() {
         instance->normal = smat4_transpose(smat4_inverse(instance->pose));
     }
     
-    /* upload instance data to render*/
+    // upload instance data to render
     sg_update_buffer(
         renderer.bindings.vertex_buffers[BUFFER_INDEX_INSTANCE],
         instances, MAX_CUBE_INSTANCES * sizeof(instance_t));
 
-    /* update render pass dynamics */
+    // update render pass dynamics 
     sg_apply_viewport(0, 0, w, h, true);
     sg_apply_pipeline(renderer.pipeline);
     sg_apply_bindings(&renderer.bindings);
     sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms, sizeof(uniforms_t));
 
-    /* render the cubes group */
+    // render the cubes group 
     sg_draw(0, cube_mesh.num_elements, MAX_CUBE_INSTANCES);
 }
 
@@ -279,16 +279,17 @@ void init(void) {
     #endif
     });
 
-    // Init graphics resources and params
-    setup_scene();
-    setup_renderer();
-
     const sgui_desc_t* sgui_descs[] = {
         sgui_gfx_get(),
         NULL
     };
 
+    // it is important to initialise the gui BEFORE the graphics 
     sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
+
+    // init graphics resources and params 
+    setup_scene();
+    setup_renderer();
 }
 
 void frame(void) {
@@ -298,7 +299,9 @@ void frame(void) {
         &renderer.pass_action,
         sapp_width(), sapp_height());
 
-    render_scene();
+    if (app.render_scene) {
+        render_scene();
+    }
 
     if (app.show_ui) {
         sgui_draw(app.show_menu);
@@ -319,30 +322,30 @@ void cleanup(void) {
 }
 
 void event(const sapp_event* ev) {
-    // Exit application
+    // exit application
     if ((ev->key_code == SAPP_KEYCODE_ESCAPE)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
         cleanup();
         exit(EXIT_SUCCESS);
     }
 
-    // Toggle menu visibility (Alt)
+    // toggle menu visibility (Alt)
     if (ev->modifiers & SAPP_MODIFIER_ALT) {
         app.show_menu = !app.show_menu;
     }
 
-    // Toggle UI visibility (Ctrl+G)
+    // toggle UI visibility (Ctrl+G)
     if ((ev->key_code == SAPP_KEYCODE_G)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
         && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
         app.show_ui = !app.show_ui;
     }
 
-    // Toggle render scene visibility (Ctrl+R)
+    // toggle render scene visibility (Ctrl+R)
     if ((ev->key_code == SAPP_KEYCODE_R)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
         && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
-        app.show_ui = !app.show_ui;
+        app.render_scene= !app.render_scene;
     }
 
     sgui_event(ev);
