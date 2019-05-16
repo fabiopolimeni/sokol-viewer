@@ -70,7 +70,7 @@ typedef struct {
 node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc);
 void scene_remove_node(scene_t* scene, node_id_t node);
 
-void scene_update_geometry_pass(scene_t* scene, geometry_pass_t* pass);
+void scene_update_geometry_pass(const scene_t* scene, geometry_pass_t* pass);
 
 #if defined(__cplusplus)
 } // extern "C"

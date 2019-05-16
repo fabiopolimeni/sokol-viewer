@@ -5,6 +5,7 @@
 
 #include "sokol_gfx.h"
 #include "viewer_handle.h"
+#include "viewer_math.h"
 
 #define RENDER_PASS_MAX_DRAW_CALLS 16
 #define RENDER_CTX_MAX_PASSES 8
@@ -35,7 +36,6 @@ typedef struct {
 } uniforms_t;
 
 typedef struct {
-    sg_pass_action pass_action;
     sg_shader shader;
     sg_pipeline pipeline;
     uniforms_t uniforms;
@@ -50,8 +50,15 @@ typedef struct {
     int32_t h;
 } viewport_desc_t;
 
-void render_draw(const viewport_desc_t* vp,
-    const render_pass_t* passes, int32_t count);
+typedef struct {
+    vec4f_t color;
+    float depth;
+    uint8_t stencil;
+} clear_desc_t;
+
+void render_begin(const clear_desc_t* clear, const viewport_desc_t* vp);
+void render_draw(const render_pass_t** passes, int32_t count);
+void render_end();
 
 #if defined(__cplusplus)
 } // extern "C"

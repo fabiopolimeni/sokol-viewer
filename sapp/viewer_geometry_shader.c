@@ -48,7 +48,7 @@ const char* geometry_fs_src =
 "  vec3 r = reflect(-light_vec, normal);\n"
 "  float r_dot_v = max(dot(r, eye_vec), 0.0);\n"
 "  float spec = pow(r_dot_v, spec_power) * n_dot_l;"
-"  float ambient = ambient_spec.xyz;"
+"  vec3 ambient = ambient_spec.xyz;"
 "  return ambient + diff + vec3(spec,spec,spec);"
 "}\n"
 "void main() {\n"

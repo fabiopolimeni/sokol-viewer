@@ -363,7 +363,7 @@ void geometry_pass_destroy_group(geometry_pass_t* pass, group_id_t group) {
 
             // the only buffer initialised by the group logic 
             // is the instance buffer, therfore, is the only 
-            // we need to destroy here manually.
+            // we need to destroy here manually
             sg_destroy_buffer(
                 draw->bindings.vertex_buffers[BUFFER_INDEX_INSTANCE]);
             
@@ -381,7 +381,7 @@ void geometry_pass_update_group(geometry_pass_t* pass,
         group_t* grp = &pass->groups[group.id];
 
         // check whether the group is valid,
-        // skip and emit a warning otherwise.
+        // skip and emit a warning otherwise
         if (!handle_is_valid(grp->mesh_id, GEOMETRY_PASS_MAX_MESHES) ||
             handle_is_valid(grp->material_id, GEOMETRY_PASS_MAX_MATERIALS)) {
             LOG_WARN("WARN: Group (%s:%d) is not valid\n",
@@ -389,7 +389,8 @@ void geometry_pass_update_group(geometry_pass_t* pass,
             return;
         }
 
-        // if too many instances in the array, trim them off and warn
+        // if too many instances in the array,
+        // then trim them off and issue a warn
         if (count > GEOMETRY_PASS_MAX_INSTANCES) {
             LOG_WARN("WARN: Too many instances (%d) for group (%s:%d);"
                 "only %d will be updated\n", count, grp->trace.name,
@@ -411,14 +412,6 @@ void geometry_pass_update_group(geometry_pass_t* pass,
 static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
     render_pass_t* render_pass) {
     
-    // init pass action
-    render_pass->pass_action = (sg_pass_action) {
-        .colors[0] = { 
-            .action=SG_ACTION_CLEAR,
-            .val={0.6f, 0.8f, 0.0f, 1.0f}
-        }
-    };
-
     // init uniforms
     render_pass->uniforms.vs_ubo.index = UNIFORM_BLOCK_INDEX;
     render_pass->uniforms.vs_ubo.data = (uint8_t*)&geometry_pass->globals;
@@ -556,8 +549,8 @@ void geometry_pass_cleanup(geometry_pass_t* pass) {
         }
     }
 
-    // groups will be destroyed automatically when, either
-    // the corresponding mesh, or material get destoried.
+    // groups will be destroyed automatically when either
+    // the corresponding mesh, or material, get destoried.
 
     // release render resources
     render_pass_destroy(&pass->render);

@@ -149,7 +149,7 @@ static int32_t node_link_compare(const void* a, const void* b) {
     return a_link->parent.id - b_link->parent.id;
 }
 
-static void update_instances(scene_t* scene, geometry_pass_t* pass) {
+static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
     node_link_t links[SCENE_MAX_NODES] = {0};
     int32_t nodes_count = 0;
 
@@ -165,6 +165,11 @@ static void update_instances(scene_t* scene, geometry_pass_t* pass) {
             link->group = node_ptr->model.group_id;
             ++nodes_count;
         }
+    }
+
+    // early exit if no nodes in the scene
+    if (nodes_count == 0) {
+        return;
     }
 
     // sort link array by parent id, this way
@@ -226,7 +231,7 @@ static void update_instances(scene_t* scene, geometry_pass_t* pass) {
     }
 }
 
-void scene_update_geometry_pass(scene_t* scene, geometry_pass_t* pass) {
+void scene_update_geometry_pass(const scene_t* scene, geometry_pass_t* pass) {
     assert(scene && pass);
 
     mat4f_t proj = smat4_identity();
