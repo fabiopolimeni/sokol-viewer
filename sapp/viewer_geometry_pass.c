@@ -59,13 +59,14 @@ static bool material_is_empty(const material_t* material) {
     return memcmp(material, &empty_material, sizeof(material_t)) == 0;
 }
 
-const static group_t empty_group = {
+const static model_t empty_model = {
     .mesh_id = {.id = HANDLE_INVALID_ID},
-    .material_id = {.id = HANDLE_INVALID_ID}
+    .material_id = {.id = HANDLE_INVALID_ID},
+    .trace = {0}
 };
 
-static bool group_is_empty(const group_t* group) {
-    return memcmp(group, &empty_group, sizeof(group_t)) == 0;
+static bool model_is_empty(const model_t* model) {
+    return memcmp(model, &empty_model, sizeof(model_t)) == 0;
 }
 
 mesh_id_t geometry_pass_make_mesh(geometry_pass_t* pass, 
@@ -97,10 +98,10 @@ mesh_id_t geometry_pass_make_mesh(geometry_pass_t* pass,
     
     // create temporary buffer traces labels
     trace_t vb_trace;
-    trace_printf(&vb_trace, "%s-%s", mesh_desc->label, "vb");
+    trace_printf(&vb_trace, "%s-%s", mesh_desc->label, "vertex-buffer");
 
     trace_t ib_trace;
-    trace_printf(&ib_trace, "%s-%s", mesh_desc->label, "ib");
+    trace_printf(&ib_trace, "%s-%s", mesh_desc->label, "index-buffer");
 
     mesh_t mesh = {
         .vbuf = sg_make_buffer(&(sg_buffer_desc){
@@ -192,12 +193,12 @@ void geometry_pass_destroy_mesh(geometry_pass_t* pass, mesh_id_t mesh) {
         pass->meshes[mesh.id] = empty_mesh;
     }
 
-    // look up for the group, if exists, which
+    // look up for the model, if exists, which
     // points to this mesh and invalidate it.
-    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_GROUPS; ++i) {
-        group_t* group = &pass->groups[i];
-        if (group->mesh_id.id == mesh.id) {
-            geometry_pass_destroy_group(pass, (group_id_t){.id=i});
+    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_MODELS; ++i) {
+        model_t* model = &pass->models[i];
+        if (model->mesh_id.id == mesh.id) {
+            geometry_pass_destroy_model(pass, (model_id_t){.id=i});
         }
     }
 }
@@ -269,7 +270,7 @@ material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
         .height = 4,
         .pixels = checkerboard_pixels,
         .ambient_spec = (vec4f_t){1.f,1.f,1.f,0.f},
-        .label = "checkboard-material"
+        .label = "default-material"
     });
 }
 
@@ -281,57 +282,63 @@ void geometry_pass_destroy_material(geometry_pass_t* pass, material_id_t mat) {
         pass->materials[mat.id] = empty_material;
     }
 
-    // find the relative group to invalidate
-    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_GROUPS; ++i) {
-        group_t* group = &pass->groups[i];
-        if (group->material_id.id == mat.id) {
-            geometry_pass_destroy_group(pass, (group_id_t){.id=i});
+    // find the relative model to invalidate
+    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_MODELS; ++i) {
+        model_t* model = &pass->models[i];
+        if (model->material_id.id == mat.id) {
+            geometry_pass_destroy_model(pass, (model_id_t){.id=i});
         }
     }
 }
 
-group_id_t geometry_pass_create_group(geometry_pass_t* pass,
-    const group_desc_t* group_desc) {
-    assert(pass && group_desc);
-    assert(group_desc->mesh.id != HANDLE_INVALID_ID);
-    assert(group_desc->material.id != HANDLE_INVALID_ID);
+model_id_t geometry_pass_create_model(geometry_pass_t* pass,
+    const model_desc_t* model_desc) {
+    assert(pass && model_desc);
+    assert(model_desc->mesh.id != HANDLE_INVALID_ID);
+    assert(model_desc->material.id != HANDLE_INVALID_ID);
 
-    group_id_t group_id = {
+    model_id_t model_id = {
         .id = HANDLE_INVALID_ID
     };
 
     // search for an empty slot
-    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_GROUPS; ++i) {
+    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_MODELS; ++i) {
         // if we find an empty slot, store the index and break the loop
-        if (group_is_empty(&pass->groups[i])) {
-            group_id.id = i;
+        if (model_is_empty(&pass->models[i])) {
+            model_id.id = i;
             break;
         }
     }
 
     // no free slot found
-    if (group_id.id == HANDLE_INVALID_ID) {
-        return group_id;
+    if (model_id.id == HANDLE_INVALID_ID) {
+        return model_id;
     }
 
-    group_t group = {
-        .mesh_id = group_desc->mesh,
-        .material_id = group_desc->material
+    model_t model = {
+        .mesh_id = model_desc->mesh,
+        .material_id = model_desc->material
     };
 
-    // store the label into the group's trace name
-    trace_printf(&group.trace, "%s", group_desc->label);
+    // store the label into the model's trace name
+    trace_printf(&model.trace, "%s", model_desc->label);
+
+    // store model into the array
+    pass->models[model_id.id] = model;
 
     // create a drawcall
-    draw_call_t* draw = &pass->render.draws[group_id.id];
+    draw_call_t* draw = &pass->render.draws[model_id.id];
     
     // zero initialise draw params
     draw->indices_offset = 0;
     draw->num_instances = 0;
 
-    const mesh_t* mesh = &pass->meshes[group.mesh_id.id];
+    const mesh_t* mesh = &pass->meshes[model.mesh_id.id];
 
     draw->num_indices = mesh->num_elements;
+
+    trace_t id_trace;
+    trace_printf(&id_trace, "%s-%s", model_desc->label, "instance-buffer");
     
     // update draw bindings
     draw->bindings.index_buffer = mesh->ibuf;
@@ -340,28 +347,28 @@ group_id_t geometry_pass_create_group(geometry_pass_t* pass,
         sg_make_buffer(&(sg_buffer_desc) {
             .size = GEOMETRY_PASS_MAX_INSTANCES * sizeof(instance_t),
             .usage = SG_USAGE_STREAM,
-            .label = "geometry-pass-instance-data"
+            .label = id_trace.name
         });
 
-    const material_t* mat = &pass->materials[group.material_id.id];
+    const material_t* mat = &pass->materials[model.material_id.id];
     draw->bindings.fs_images[SAMPLER_INDEX_ALBEDO] = mat->albedo_rough;
 
-    return group_id;
+    return model_id;
 }
 
-void geometry_pass_destroy_group(geometry_pass_t* pass, group_id_t group) {
+void geometry_pass_destroy_model(geometry_pass_t* pass, model_id_t model) {
     assert(pass);
     
-    // mark the group slot free
-    if (handle_is_valid(group, GEOMETRY_PASS_MAX_GROUPS)) {
-        group_t* grp = &pass->groups[group.id];
-        if (!group_is_empty(grp)) {
-            *grp = empty_group;
+    // mark the model slot free
+    if (handle_is_valid(model, GEOMETRY_PASS_MAX_MODELS)) {
+        model_t* model_ptr = &pass->models[model.id];
+        if (!model_is_empty(model_ptr)) {
+            *model_ptr = empty_model;
 
             // destroy the drawcall and set the slot free
-            draw_call_t* draw = &pass->render.draws[group.id];
+            draw_call_t* draw = &pass->render.draws[model.id];
 
-            // the only buffer initialised by the group logic 
+            // the only buffer initialised by the model logic 
             // is the instance buffer, therfore, is the only 
             // we need to destroy here manually
             sg_destroy_buffer(
@@ -373,33 +380,33 @@ void geometry_pass_destroy_group(geometry_pass_t* pass, group_id_t group) {
     }
 }
 
-void geometry_pass_update_group(geometry_pass_t* pass,
-    group_id_t group, const instance_t* instances, uint32_t count) {
+void geometry_pass_update_model_instances(geometry_pass_t* pass,
+    model_id_t model, const instance_t* instances, uint32_t count) {
     assert(pass && instances && count > 0);
 
-    if (handle_is_valid(group, GEOMETRY_PASS_MAX_GROUPS)) {
-        group_t* grp = &pass->groups[group.id];
+    if (handle_is_valid(model, GEOMETRY_PASS_MAX_MODELS)) {
+        model_t* model_ptr = &pass->models[model.id];
 
-        // check whether the group is valid,
+        // check whether the model is valid,
         // skip and emit a warning otherwise
-        if (!handle_is_valid(grp->mesh_id, GEOMETRY_PASS_MAX_MESHES) ||
-            handle_is_valid(grp->material_id, GEOMETRY_PASS_MAX_MATERIALS)) {
+        if (!handle_is_valid(model_ptr->mesh_id, GEOMETRY_PASS_MAX_MESHES) ||
+            !handle_is_valid(model_ptr->material_id, GEOMETRY_PASS_MAX_MATERIALS)) {
             LOG_WARN("WARN: Group (%s:%d) is not valid\n",
-                grp->trace.name, group.id);
+                model_ptr->trace.name, model.id);
             return;
         }
 
         // if too many instances in the array,
         // then trim them off and issue a warn
         if (count > GEOMETRY_PASS_MAX_INSTANCES) {
-            LOG_WARN("WARN: Too many instances (%d) for group (%s:%d);"
-                "only %d will be updated\n", count, grp->trace.name,
-                group.id, GEOMETRY_PASS_MAX_INSTANCES);
+            LOG_WARN("WARN: Too many instances (%d) for model (%s:%d);"
+                "only %d will be updated\n", count, model_ptr->trace.name,
+                model.id, GEOMETRY_PASS_MAX_INSTANCES);
             count = GEOMETRY_PASS_MAX_INSTANCES;
         }
 
         // upload instance data to render device
-        draw_call_t* draw_call = &pass->render.draws[group.id];
+        draw_call_t* draw_call = &pass->render.draws[model.id];
         const sg_bindings* bindings = &draw_call->bindings;
         sg_update_buffer(bindings->vertex_buffers[BUFFER_INDEX_INSTANCE],
             instances, count * sizeof(instance_t));
@@ -501,15 +508,6 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
     trace_printf(&render_pass->trace, "geometry-pass");
 }
 
-void render_pass_destroy(render_pass_t* render_pass) {
-    assert(render_pass);
-
-    sg_destroy_shader(render_pass->shader);
-    sg_destroy_pipeline(render_pass->pipeline);
-
-    memset(render_pass, 0, sizeof(render_pass_t));
-}
-
 void geometry_pass_init(geometry_pass_t* pass) {
     assert(pass);
 
@@ -524,8 +522,8 @@ void geometry_pass_init(geometry_pass_t* pass) {
     }
 
     // mark all instance slots empty
-    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_GROUPS; ++i) {
-        memcpy(&pass->groups[i], &empty_group, sizeof(group_t));
+    for (int32_t i = 0; i < GEOMETRY_PASS_MAX_MODELS; ++i) {
+        memcpy(&pass->models[i], &empty_model, sizeof(model_t));
     }
 
     // setup the render pass
@@ -549,11 +547,14 @@ void geometry_pass_cleanup(geometry_pass_t* pass) {
         }
     }
 
-    // groups will be destroyed automatically when either
+    // models will be destroyed automatically when either
     // the corresponding mesh, or material, get destoried.
 
     // release render resources
-    render_pass_destroy(&pass->render);
+    sg_destroy_shader(pass->render.shader);
+    sg_destroy_pipeline(pass->render.pipeline);
+
+    memset(&pass->render, 0, sizeof(render_pass_t));
 }
 
 #if defined(__cplusplus)

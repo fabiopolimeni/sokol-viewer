@@ -57,7 +57,7 @@ typedef struct {
 } clear_desc_t;
 
 void render_begin(const clear_desc_t* clear, const viewport_desc_t* vp);
-void render_draw(const render_pass_t** passes, int32_t count);
+void render_pass_draw(const render_pass_t* pass);
 void render_end();
 
 #if defined(__cplusplus)

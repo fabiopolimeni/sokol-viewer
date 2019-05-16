@@ -2,6 +2,7 @@
 //  viewer-sapp.c
 //------------------------------------------------------------------------------
 #include <stdlib.h>
+#include <string.h>
 
 #include "sokol_args.h"
 #include "sokol_app.h"
@@ -17,6 +18,7 @@
 #include "viewer_geometry_pass.h"
 
 #define MSAA_SAMPLES 1
+#define MAX_BOXES 10
 
 typedef struct {
     uint8_t show_menu: 1;
@@ -56,12 +58,30 @@ static inline float rnd(float min_val, float max_val) {
 static render_pass_t render_pass = {0};
 static geometry_pass_t geometry_pass = {0};
 static scene_t scene = {0};
-static group_id_t cubes_group;
-static mesh_t cube_mesh = {0};
-static material_t cube_mat = {0};
+
+static mesh_id_t box_mesh = {HANDLE_INVALID_ID};
+static material_id_t default_mat = {HANDLE_INVALID_ID};
+static model_id_t boxes_group = {HANDLE_INVALID_ID};
+static node_id_t box_nodes[MAX_BOXES];
 
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
+
+    default_mat = geometry_pass_make_material_default(&geometry_pass);
+    box_mesh = geometry_pass_make_mesh_box(&geometry_pass,
+        &(mesh_box_desc_t){
+           .width = 1.f,
+           .height = 1.f,
+           .length = 1.f,
+           .label = "box-mesh" 
+        });
+
+    boxes_group = geometry_pass_create_model(&geometry_pass, 
+        &(model_desc_t){
+            .mesh = box_mesh,
+            .material = default_mat,
+            .label = "box-group"
+        });
 }
 
 static void setup_scene() {
@@ -84,6 +104,7 @@ static void setup_scene() {
     };
         
     scene.root = smat4_identity();
+    memset(box_nodes, HANDLE_INVALID_ID, sizeof(box_nodes));
 }
 
 static void update_scene() {
@@ -91,11 +112,102 @@ static void update_scene() {
 }
 
 static void draw_scene() {
-    const render_pass_t* passes[] = {
-        &geometry_pass.render
-    };
+    render_pass_draw(&geometry_pass.render);
+}
 
-    render_draw(passes, 1);
+// return the index at which the node has
+// been added into the box_nodes array
+static int32_t create_box(int32_t parent_id) {
+    // find first available box slot
+    int32_t box_id = HANDLE_INVALID_ID;
+    for (int32_t b = 0; b < MAX_BOXES; ++b) {
+        if (!handle_is_valid(box_nodes[b], SCENE_MAX_NODES)) {
+            box_id = b;
+            break;
+        }
+    }
+
+    if (box_id >= 0) {
+        trace_t node_trace;
+        trace_printf(&node_trace, "box-node-%d", box_id);
+
+        node_id_t parent = {
+            .id = HANDLE_INVALID_ID
+        };
+
+        if (parent_id > 0 && parent_id < MAX_BOXES) {
+            parent = box_nodes[parent_id];
+        }
+
+        box_nodes[box_id] = scene_add_node(&scene, &(node_desc_t){
+            .transform = (transform_t){
+                .position = (vec3f_t){
+                    .x = rnd(-6.0f, 6.0f),
+                    .y = rnd(-3.0f, 3.0f),
+                    .z = rnd(-3.0f, 3.0f)
+                },
+                .scale = (vec3f_t){
+                    .x = rnd(0.5f, 2.0f),
+                    .y = rnd(0.5f, 2.0f),
+                    .z = rnd(0.5f, 2.0f)
+                },
+                .rotation = squat_from_euler((vec3f_t){
+                    .x = rnd(0.f, MPI),
+                    .y = rnd(0.f, MPI),
+                    .z = rnd(0.f, MPI)
+                })
+            },
+            .color = (vec4f_t){
+                .x = rnd(0.0f, 1.0f),
+                .y = rnd(0.0f, 1.0f),
+                .z = rnd(0.0f, 1.0f),
+                .w = 1.0f
+            },
+            .model = boxes_group,
+            .parent = parent,
+            .label = node_trace.name
+        });
+
+        LOG_INFO("INFO: Box (pos:%d, node:%d) added to the scene",
+            box_id, box_nodes[box_id].id);
+    }
+
+    return box_id;
+}
+
+// return the number of live box nodes
+static int32_t destroy_box(int32_t box_id, bool recursive) {
+    int32_t alive_boxes = 0;
+    
+    // if the passed id is < 0, then, search
+    // for the first full slot to free
+    if (box_id < 0) {
+        for (int32_t b = 0; b < MAX_BOXES; ++b) {
+            if (handle_is_valid(box_nodes[b], SCENE_MAX_NODES)) {
+                box_id = b;
+                break;
+            }
+        }
+    }
+
+    if (box_id < MAX_BOXES) {
+        scene_remove_node(&scene, box_nodes[box_id], recursive);
+
+        // iterate throught the box nodes to check whether
+        // the pointed node is still alive or not, as it can
+        // have been removed by the routine, and therefore it
+        // needs to be cleared up from the boxes array.
+        for (int32_t b = 0; b < MAX_BOXES; ++b) {
+            if (!scene_node_is_alive(&scene, box_nodes[b])) {
+                box_nodes[box_id].id = HANDLE_INVALID_ID;
+            }
+            else {
+                ++alive_boxes;
+            }
+        }
+    }
+
+    return alive_boxes;
 }
 
 void init(void) {
@@ -122,8 +234,8 @@ void init(void) {
     sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
 
     // init scene and graphics resources
-    setup_scene();
     setup_render();
+    setup_scene();
 }
 
 void frame(void) {
@@ -137,7 +249,6 @@ void frame(void) {
         .x = 0, .y = 0,
         .w = sapp_width(),
         .h = sapp_height()
-
     });
 
     if (app.render_scene) {
@@ -184,6 +295,13 @@ void event(const sapp_event* ev) {
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
         && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
         app.render_scene = !app.render_scene;
+    }
+
+    // create a new box (Ctrl+B)
+    if ((ev->key_code == SAPP_KEYCODE_B)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
+        && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
+        create_box(HANDLE_INVALID_ID);
     }
 
     sgui_event(ev);
@@ -362,7 +480,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 //     // update instance model, and normal, matrices 
 //     instance_t instances[MAX_CUBE_INSTANCES] = {0};
-//     const group_t* cubes = &scene.groups[cubes_group.id];
+//     const model_t* cubes = &scene.models[cubes_group.id];
 //     for (size_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
 //         const instance_t* cube = &cubes->instances[i];
 //         instance_t *instance = &instances[i];
@@ -371,7 +489,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 //         instance->normal = smat4_transpose(smat4_inverse(instance->pose));
 //     }
     
-//     // @todo: update instance data of all render groups
+//     // @todo: update instance data of all render models
     
 //     // upload instance data to render
 //     sg_update_buffer(

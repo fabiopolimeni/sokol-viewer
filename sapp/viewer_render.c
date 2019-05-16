@@ -49,38 +49,36 @@ void render_end() {
     sg_commit();
 }
 
-void render_draw(const render_pass_t** passes, int32_t count) {
-    assert(passes && count > 0);
+void render_pass_draw(const render_pass_t* pass) {
+    assert(pass);
 
-    for (int32_t i = 0; i < count; ++i) {
-        const render_pass_t* pass = passes[i];
+    // pipeline
+    sg_apply_pipeline(pass->pipeline);
 
-        // pipeline
-        sg_apply_pipeline(pass->pipeline);
+    // vertex stage uniforms
+    const ubo_t* vs_ubo = &pass->uniforms.vs_ubo;
+    if (vs_ubo->data && vs_ubo->size > 0 && vs_ubo->index >= 0) {
+        sg_apply_uniforms(SG_SHADERSTAGE_VS,
+            vs_ubo->index, vs_ubo->data, vs_ubo->size);
+    }
 
-        // vertex stage uniforms
-        const ubo_t* vs_ubo = &pass->uniforms.vs_ubo;
-        if (vs_ubo->data && vs_ubo->size > 0 && vs_ubo->index >= 0) {
-            sg_apply_uniforms(SG_SHADERSTAGE_VS,
-                vs_ubo->index, vs_ubo->data, vs_ubo->size);
-        }
+    // fragment stage uniforms
+    const ubo_t* fs_ubo = &pass->uniforms.fs_ubo;
+    if (fs_ubo->data && fs_ubo->size > 0 && fs_ubo->index >= 0) {
+        sg_apply_uniforms(SG_SHADERSTAGE_FS,
+            fs_ubo->index, fs_ubo->data, fs_ubo->size);
+    }
 
-        // fragment stage uniforms
-        const ubo_t* fs_ubo = &pass->uniforms.fs_ubo;
-        if (fs_ubo->data && fs_ubo->size > 0 && fs_ubo->index >= 0) {
-            sg_apply_uniforms(SG_SHADERSTAGE_FS,
-                fs_ubo->index, fs_ubo->data, fs_ubo->size);
-        }
-
-        // iterate through the draw calls, apply
-        // corresponding binding data, and draw
-        for (int32_t j = 0; j < RENDER_PASS_MAX_DRAW_CALLS; ++j) {
-            const draw_call_t* draw_call = &pass->draws[j];
-            if (!draw_call_is_empty(draw_call)) {
-                sg_apply_bindings(&draw_call->bindings);
-                sg_draw(draw_call->indices_offset, draw_call->num_indices,
-                    draw_call->num_instances);
-            }
+    // iterate through the draw calls, apply
+    // corresponding binding data, and draw
+    for (int32_t j = 0; j < RENDER_PASS_MAX_DRAW_CALLS; ++j) {
+        const draw_call_t* draw_call = &pass->draws[j];
+        if (!draw_call_is_empty(draw_call)) {
+            sg_apply_bindings(&draw_call->bindings);
+            sg_draw(
+                draw_call->indices_offset,
+                draw_call->num_indices,
+                draw_call->num_instances);
         }
     }
 }

@@ -8,10 +8,6 @@
 extern "C" {
 #endif
 
-static const model_t model_empty = {
-    .group_id = {HANDLE_INVALID_ID}
-};
-
 static const transform_t transform_default = {
     .position = {0.f,0.f,0.f},
     .scale = {1.f,1.f,1.f},
@@ -24,9 +20,7 @@ static const node_t node_empty = {
         .scale = {1.f,1.f,1.f},
         .rotation = {0.f,0.f,0.f,1.f},
     },
-    .model = {
-        .group_id = {HANDLE_INVALID_ID}
-    },
+    .model_id = {HANDLE_INVALID_ID},
     .parent_id = {HANDLE_INVALID_ID}
 };
 
@@ -88,7 +82,7 @@ node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc) {
     }
 
     node_t* node = &scene->nodes[node_id.id];
-    node->model = (model_t){.group_id = desc->group};
+    node->model_id = desc->model;
     node->transform = desc->transform;
     node->color = desc->color;
 
@@ -106,27 +100,46 @@ node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc) {
     return node_id;
 }
 
-void scene_remove_node(scene_t* scene, node_id_t node) {
+void scene_remove_node(scene_t* scene, node_id_t node, bool recursive) {
     assert(scene);
 
     if (handle_is_valid(node, SCENE_MAX_NODES)) {
         node_t* node_ptr = &scene->nodes[node.id];
         if (!node_is_empty(node_ptr)) {
             node_id_t parent = node_ptr->parent_id;
-            *node_ptr = node_empty;
 
-            // search for all nodes that have this as
-            // parent and relink them to this node's parent.
+            // search for all nodes that have this as parent
             for (int32_t i = 0; i < SCENE_MAX_NODES; ++i) {
                 if (i != node.id) {
                     node_t* child_ptr = &scene->nodes[i];
-                    if (child_ptr->parent_id.id == node.id) {
-                        child_ptr->parent_id = parent;
+                    if (child_ptr->parent_id.id == node.id) {           
+                        if (recursive) {
+                            // remove all the children if requested
+                            scene_remove_node(scene, (node_id_t){.id=i}, true);
+                        }
+                        else {
+                            // reattach the child to the parent of this node
+                            child_ptr->parent_id = parent;
+                        }
                     }
                 }
             }
+
+            // free node's slot
+            *node_ptr = node_empty;
         }
     }
+}
+
+bool scene_node_is_alive(const scene_t* scene, node_id_t node) {
+    assert(scene);
+
+    if (handle_is_valid(node, SCENE_MAX_NODES)) {
+        const node_t* node_ptr = &scene->nodes[node.id];
+        return !node_is_empty(node_ptr);
+    }
+
+    return false;
 }
 
 typedef struct {
@@ -135,7 +148,7 @@ typedef struct {
     vec4f_t color;
     node_id_t node;
     node_id_t parent;
-    group_id_t group;
+    model_id_t model;
 } node_link_t;
 
 typedef struct {
@@ -162,7 +175,7 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
             link->parent = node_ptr->parent_id;
             link->transform = node_ptr->transform;
             link->color = node_ptr->color;
-            link->group = node_ptr->model.group_id;
+            link->model = node_ptr->model_id;
             ++nodes_count;
         }
     }
@@ -179,19 +192,19 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
 
     // while traversing the links list bucket
     // bucket for later render procerssing
-    bucket_t buckets[GEOMETRY_PASS_MAX_GROUPS] = {0};
+    bucket_t buckets[GEOMETRY_PASS_MAX_MODELS] = {0};
 
     // calculate affine transformation for each node
     for (int32_t l = 0; l < nodes_count; ++l) {
         node_link_t* link = &links[l];
-        
-        // transformation is local, therefore, compute
-        // rotation, translation and scaling in this oder
-        mat4f_t local_pose =
-            smat4_scale(smat4_translation(smat4_rotation_quat(
-                link->transform.rotation),
-                link->transform.position),
-                link->transform.scale);
+    
+        mat4f_t local_pose = 
+            smat4_translate(smat4_multiply(
+                    smat4_rotation_quat(
+                        squat_normalize(link->transform.rotation)),
+                    smat4_scaling(
+                        smat4_identity(), link->transform.scale)
+                ), link->transform.position);
 
         // transform local pose into model space
         // by multiplying it by its parent pose
@@ -211,9 +224,9 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
             }
         }
 
-        // set instance data for the render group
-        assert(handle_is_valid(link->group, GEOMETRY_PASS_MAX_GROUPS));
-        bucket_t* bucket = &buckets[link->group.id];
+        // set instance data for the render model
+        assert(handle_is_valid(link->model, GEOMETRY_PASS_MAX_MODELS));
+        bucket_t* bucket = &buckets[link->model.id];
         
         instance_t *instance = &bucket->instances[bucket->instances_count++];
         instance->color = link->color;
@@ -222,10 +235,10 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
     }
 
     // upload instance data to geometry pass
-    for (int32_t b = 0; b < GEOMETRY_PASS_MAX_GROUPS; ++b) {
+    for (int32_t b = 0; b < GEOMETRY_PASS_MAX_MODELS; ++b) {
         const bucket_t* bucket = &buckets[b];
         if (bucket->instances_count > 0) {
-            geometry_pass_update_group(pass, (group_id_t){.id=b},
+            geometry_pass_update_model_instances(pass, (model_id_t){.id=b},
                 bucket->instances, bucket->instances_count);
         }
     }

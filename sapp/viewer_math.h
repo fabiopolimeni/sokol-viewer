@@ -25,6 +25,9 @@ typedef struct mat4 mat4f_t;
 
 typedef struct quat quat_t;
 
+quat_t squat_from_euler(vec3f_t euler);
+vec3f_t squat_to_euler(quat_t rotation);
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

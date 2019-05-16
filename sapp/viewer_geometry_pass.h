@@ -11,7 +11,7 @@
 #define GEOMETRY_PASS_MAX_MESHES 32     // max number of meshes per pass
 #define GEOMETRY_PASS_MAX_MATERIALS 16  // max number of materials per pass
 #define GEOMETRY_PASS_MAX_INSTANCES 64  // max number of instances per group
-#define GEOMETRY_PASS_MAX_GROUPS RENDER_PASS_MAX_DRAW_CALLS
+#define GEOMETRY_PASS_MAX_MODELS RENDER_PASS_MAX_DRAW_CALLS
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,7 +19,7 @@ extern "C" {
 
 typedef struct handle_t mesh_id_t;
 typedef struct handle_t material_id_t;
-typedef struct handle_t group_id_t;
+typedef struct handle_t model_id_t;
 
 // -----------------------------------------------------------------------------
 // Structures
@@ -56,7 +56,7 @@ typedef struct {
     mesh_id_t mesh_id;
     material_id_t material_id;
     trace_t trace;
-} group_t;
+} model_t;
 
 typedef struct {
     mat4f_t view_proj;
@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     mesh_t meshes[GEOMETRY_PASS_MAX_MESHES];
     material_t materials[GEOMETRY_PASS_MAX_MATERIALS];
-    group_t groups[GEOMETRY_PASS_MAX_GROUPS];
+    model_t models[GEOMETRY_PASS_MAX_MODELS];
     globals_t globals;
     render_pass_t render;
 } geometry_pass_t;
@@ -122,15 +122,15 @@ typedef struct {
     mesh_id_t mesh;
     material_id_t material;
     const char* label;
-} group_desc_t;
+} model_desc_t;
 
-group_id_t geometry_pass_create_group(geometry_pass_t* pass,
-    const group_desc_t* group_desc);
+model_id_t geometry_pass_create_model(geometry_pass_t* pass,
+    const model_desc_t* desc);
 
-void geometry_pass_destroy_group(geometry_pass_t* pass, group_id_t group);
+void geometry_pass_destroy_model(geometry_pass_t* pass, model_id_t model);
 
-void geometry_pass_update_group(geometry_pass_t* pass,
-    group_id_t group, const instance_t* instances, uint32_t count);
+void geometry_pass_update_model_instances(geometry_pass_t* pass,
+    model_id_t model, const instance_t* instances, uint32_t count);
 
 void geometry_pass_init(geometry_pass_t* pass);
 

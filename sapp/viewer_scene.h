@@ -16,10 +16,6 @@ extern "C" {
 typedef struct handle_t node_id_t;
 
 typedef struct {
-    group_id_t group_id;
-} model_t;
-
-typedef struct {
     vec3f_t position;
     vec3f_t scale;
     quat_t rotation;
@@ -28,7 +24,7 @@ typedef struct {
 typedef struct {
     transform_t transform;
     vec4f_t color;
-    model_t model;
+    model_id_t model_id;
     node_id_t parent_id;
     trace_t trace;
 } node_t;
@@ -62,13 +58,14 @@ void scene_cleanup(scene_t* scene);
 typedef struct {
     transform_t transform;
     vec4f_t color;
-    group_id_t group;
+    model_id_t model;
     node_id_t parent;
     const char* label;
 } node_desc_t;
 
 node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc);
-void scene_remove_node(scene_t* scene, node_id_t node);
+void scene_remove_node(scene_t* scene, node_id_t node, bool recursive);
+bool scene_node_is_alive(const scene_t* scene, node_id_t node);
 
 void scene_update_geometry_pass(const scene_t* scene, geometry_pass_t* pass);
 
