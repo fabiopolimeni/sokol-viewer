@@ -1,10 +1,9 @@
-#pragma once
-/**
- * Shaders code
- */
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 #if defined(SOKOL_GLCORE33)
-static const char* vs_src =
+const char* geometry_vs_src =
 "#version 330\n"
 "uniform mat4 view_proj;\n"
 "uniform vec4 light;\n"
@@ -31,9 +30,10 @@ static const char* vs_src =
 "  uv = vertex_uv;\n"
 "  gl_Position = view_proj * instance_pose * position;\n"
 "}\n";
-static const char* fs_src =
+const char* geometry_fs_src =
 "#version 330\n"
-"uniform sampler2D albedo_tex;\n"
+"uniform vec4 ambient_spec;\n"
+"uniform sampler2D albedo_rough;\n"
 "in vec3 world_position;\n"
 "in vec3 world_normal;\n"
 "in vec3 world_eyepos;\n"
@@ -44,22 +44,23 @@ static const char* fs_src =
 "vec3 light(vec3 base_color, vec3 eye_vec, vec3 normal, vec3 light_vec) {\n"
 "  float n_dot_l = max(dot(normal, light_vec), 0.0);\n"
 "  vec3 diff = n_dot_l * base_color;\n"
-"  float spec_power = 16.0;\n"
+"  float spec_power = ambient_spec.w;\n"
 "  vec3 r = reflect(-light_vec, normal);\n"
 "  float r_dot_v = max(dot(r, eye_vec), 0.0);\n"
 "  float spec = pow(r_dot_v, spec_power) * n_dot_l;"
-"  return diff + vec3(spec,spec,spec);"
+"  float ambient = ambient_spec.xyz;"
+"  return ambient + diff + vec3(spec,spec,spec);"
 "}\n"
 "void main() {\n"
 "  vec3 eye_vec = normalize(world_eyepos - world_position);\n"
 "  vec3 nrm = normalize(world_normal);\n"
 "  vec3 light_dir = normalize(world_lightdir);\n"
-"  vec3 albedo = texture(albedo_tex, uv).xyz;\n"
+"  vec3 albedo = texture(albedo_rough, uv).xyz;\n"
 "  vec3 base_color = albedo * color.xyz;\n"
 "  frag_color = vec4(light(base_color, eye_vec, nrm, light_dir), 1.0);\n"
 "}\n";
 #elif defined(SOKOL_GLES3) || defined(SOKOL_GLES2)
-static const char* vs_src =
+const char* geometry_vs_src =
 "uniform mat4 mvp;\n"
 "uniform mat4 model;\n"
 "uniform vec4 shape_color;\n"
@@ -80,7 +81,7 @@ static const char* vs_src =
 "  world_lightdir = light_dir.xyz;\n"
 "  color = shape_color;\n"
 "}\n";
-static const char* fs_src =
+const char* geometry_fs_src =
 "precision mediump float;\n"
 "uniform samplerCube tex;\n"
 "varying vec3 world_normal;\n"
@@ -106,4 +107,8 @@ static const char* fs_src =
 "  vec3 refl_color = textureCube(tex, refl_vec).xyz;\n"
 "  gl_FragColor = vec4(light(refl_color * color.xyz, eye_vec, nrm, light_dir), 1.0);\n"
 "}\n";
+#endif
+
+#if defined(__cplusplus)
+} // extern "C"
 #endif
