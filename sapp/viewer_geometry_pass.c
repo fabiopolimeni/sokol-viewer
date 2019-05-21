@@ -1,5 +1,6 @@
 #include "viewer_geometry_pass.h"
 #include "viewer_log.h"
+#include "shaders/geometry_pass.glsl.h"
 
 #include <stddef.h>
 #include <assert.h>
@@ -7,18 +8,18 @@
 
 #define BUFFER_INDEX_VERTEX 0
 #define BUFFER_INDEX_INSTANCE 1
-#define UNIFORM_BLOCK_INDEX 0
-#define VS_UNIFORM_INDEX_VIEW_PROJ 0
-#define VS_UNIFORM_INDEX_LIGHT 1
-#define VS_UNIFORM_INDEX_EYE_POS 2
-#define FS_UNIFORM_INDEX_AMBIENT_SPEC 0
-#define SAMPLER_INDEX_ALBEDO 0
-#define ATTR_INDEX_VERTEX_POS 0
-#define ATTR_INDEX_VERTEX_NORM 1
-#define ATTR_INDEX_VERTEX_UV 2
-#define ATTR_INDEX_INSTANCE_COLOR 3
-#define ATTR_INDEX_INSTANCE_POSE 4     // mat4 takes 4 slots
-#define ATTR_INDEX_INSTANCE_NORMAL 8   // mat4 takes 4 slots
+// #define UNIFORM_BLOCK_INDEX 0
+// #define VS_UNIFORM_INDEX_VIEW_PROJ 0
+// #define VS_UNIFORM_INDEX_LIGHT 1
+// #define VS_UNIFORM_INDEX_EYE_POS 2
+// #define FS_UNIFORM_INDEX_AMBIENT_SPEC 0
+// #define SAMPLER_INDEX_ALBEDO 0
+// #define ATTR_INDEX_VERTEX_POS 0
+// #define ATTR_INDEX_VERTEX_NORM 1
+// #define ATTR_INDEX_VERTEX_UV 2
+// #define ATTR_INDEX_INSTANCE_COLOR 3
+// #define ATTR_INDEX_INSTANCE_POSE 4     // mat4 takes 4 slots
+// #define ATTR_INDEX_INSTANCE_NORMAL 8   // mat4 takes 4 slots
 #define RASTERIZER_MSAA_SAMPLES 1
 
 #if defined(__cplusplus)
@@ -348,7 +349,7 @@ model_id_t geometry_pass_create_model(geometry_pass_t* pass,
         });
 
     const material_t* mat = &pass->materials[model.material_id.id];
-    draw->bindings.fs_images[SAMPLER_INDEX_ALBEDO] = mat->albedo_rough;
+    draw->bindings.fs_images[SLOT_albedo_rough] = mat->albedo_rough;
 
     return model_id;
 }
@@ -417,52 +418,53 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
     render_pass_t* render_pass) {
     
     // init uniforms
-    render_pass->uniforms.vs_ubo.index = UNIFORM_BLOCK_INDEX;
+    render_pass->uniforms.vs_ubo.index = SLOT_vs_params;
     render_pass->uniforms.vs_ubo.data = (uint8_t*)&geometry_pass->globals;
-    render_pass->uniforms.vs_ubo.size =
-        sizeof(mat4f_t) + sizeof(vec4f_t) + sizeof(vec3f_t);
+    render_pass->uniforms.vs_ubo.size = sizeof(vs_params_t);
 
-    render_pass->uniforms.fs_ubo.index = UNIFORM_BLOCK_INDEX;
+    render_pass->uniforms.fs_ubo.index = SLOT_fs_params;
     render_pass->uniforms.fs_ubo.data = (uint8_t*)&geometry_pass->globals + 
         offsetof(globals_t, ambient_spec);
-    render_pass->uniforms.fs_ubo.size = sizeof(vec4f_t);
+    render_pass->uniforms.fs_ubo.size = sizeof(fs_params_t);
 
     // init shaders
-    render_pass->shader = sg_make_shader(&(sg_shader_desc) {
-        .attrs = {
-            [ATTR_INDEX_VERTEX_POS] = { .name="vertex_pos", .sem_name="POSITION" },
-            [ATTR_INDEX_VERTEX_NORM] = { .name="vertex_norm", .sem_name="NORMAL" },
-            [ATTR_INDEX_VERTEX_UV] = { .name="vertex_uv", .sem_name="UV" },
-            [ATTR_INDEX_INSTANCE_COLOR] = { .name="instance_color", .sem_name="COLOR" },
-            [ATTR_INDEX_INSTANCE_POSE] = { .name="instance_pose", .sem_name="POSE" },
-            [ATTR_INDEX_INSTANCE_NORMAL] = { .name="instance_normal", .sem_name="INVTRANS_POSE" }
-        },
-        .vs = {
-            .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
-                .size = render_pass->uniforms.vs_ubo.size,
-                .uniforms = {
-                    [VS_UNIFORM_INDEX_VIEW_PROJ] = { .name="view_proj", .type=SG_UNIFORMTYPE_MAT4 },
-                    [VS_UNIFORM_INDEX_LIGHT] = { .name="light", .type=SG_UNIFORMTYPE_FLOAT4 },
-                    [VS_UNIFORM_INDEX_EYE_POS] = { .name="eye_pos", .type=SG_UNIFORMTYPE_FLOAT3 }
-                }
-            },
-            .source = geometry_vs_src
-        },
-        .fs = {
-            .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
-                .size = render_pass->uniforms.fs_ubo.size,
-                .uniforms = {
-                    [FS_UNIFORM_INDEX_AMBIENT_SPEC] = { .name="ambient_spec", .type=SG_UNIFORMTYPE_FLOAT4 },
-                }
-            },
-            .images[SAMPLER_INDEX_ALBEDO] = {
-                .name = "albedo_rough",
-                .type = SG_IMAGETYPE_2D
-            },
-            .source = geometry_fs_src
-        },
-        .label = "geometry-pass-shader"
-    });
+    // render_pass->shader = sg_make_shader(&(sg_shader_desc) {
+    //     .attrs = {
+    //         [ATTR_INDEX_VERTEX_POS] = { .name="vertex_pos", .sem_name="POSITION" },
+    //         [ATTR_INDEX_VERTEX_NORM] = { .name="vertex_norm", .sem_name="NORMAL" },
+    //         [ATTR_INDEX_VERTEX_UV] = { .name="vertex_uv", .sem_name="UV" },
+    //         [ATTR_INDEX_INSTANCE_COLOR] = { .name="instance_color", .sem_name="COLOR" },
+    //         [ATTR_INDEX_INSTANCE_POSE] = { .name="instance_pose", .sem_name="POSE" },
+    //         [ATTR_INDEX_INSTANCE_NORMAL] = { .name="instance_normal", .sem_name="INVTRANS_POSE" }
+    //     },
+    //     .vs = {
+    //         .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
+    //             .size = render_pass->uniforms.vs_ubo.size,
+    //             .uniforms = {
+    //                 [VS_UNIFORM_INDEX_VIEW_PROJ] = { .name="view_proj", .type=SG_UNIFORMTYPE_MAT4 },
+    //                 [VS_UNIFORM_INDEX_LIGHT] = { .name="light", .type=SG_UNIFORMTYPE_FLOAT4 },
+    //                 [VS_UNIFORM_INDEX_EYE_POS] = { .name="eye_pos", .type=SG_UNIFORMTYPE_FLOAT3 }
+    //             }
+    //         },
+    //         .source = geometry_vs_src
+    //     },
+    //     .fs = {
+    //         .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
+    //             .size = render_pass->uniforms.fs_ubo.size,
+    //             .uniforms = {
+    //                 [FS_UNIFORM_INDEX_AMBIENT_SPEC] = { .name="ambient_spec", .type=SG_UNIFORMTYPE_FLOAT4 },
+    //             }
+    //         },
+    //         .images[SAMPLER_INDEX_ALBEDO] = {
+    //             .name = "albedo_rough",
+    //             .type = SG_IMAGETYPE_2D
+    //         },
+    //         .source = geometry_fs_src
+    //     },
+    //     .label = "geometry-pass-shader"
+    // });
+
+    render_pass->shader = sg_make_shader(geometry_pass_shader_desc());
 
     // init pipeline
     render_pass->pipeline = sg_make_pipeline(&(sg_pipeline_desc) {
@@ -471,20 +473,20 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
             .buffers[BUFFER_INDEX_VERTEX].step_func = SG_VERTEXSTEP_PER_VERTEX,
             .buffers[BUFFER_INDEX_INSTANCE].step_func = SG_VERTEXSTEP_PER_INSTANCE,
             .attrs = {
-                [ATTR_INDEX_VERTEX_POS] = {.offset = offsetof(vertex_t, pos),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
-                [ATTR_INDEX_VERTEX_NORM] = {.offset = offsetof(vertex_t, norm),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
-                [ATTR_INDEX_VERTEX_UV] = {.offset = offsetof(vertex_t, uv),.format = SG_VERTEXFORMAT_FLOAT2,.buffer_index = BUFFER_INDEX_VERTEX},
-                [ATTR_INDEX_INSTANCE_COLOR] = {.offset = offsetof(instance_t, color),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_vertex_pos] = {.offset = offsetof(vertex_t, pos),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
+                [ATTR_geo_vs_vertex_norm] = {.offset = offsetof(vertex_t, norm),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
+                [ATTR_geo_vs_vertex_uv] = {.offset = offsetof(vertex_t, uv),.format = SG_VERTEXFORMAT_FLOAT2,.buffer_index = BUFFER_INDEX_VERTEX},
+                [ATTR_geo_vs_instance_color] = {.offset = offsetof(instance_t, color),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
                 // 4x4 matrices will span 4 attribute slots
-                [ATTR_INDEX_INSTANCE_POSE] = {.offset = offsetof(instance_t, pose),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_POSE+1] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_POSE+2] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_POSE+3] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_pose] = {.offset = offsetof(instance_t, pose),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_pose+1] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_pose+2] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_pose+3] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
                 // 4x4 matrices will span 4 attribute slots
-                [ATTR_INDEX_INSTANCE_NORMAL] = {.offset = offsetof(instance_t, normal),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_NORMAL+1] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_NORMAL+2] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-                [ATTR_INDEX_INSTANCE_NORMAL+3] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE}
+                [ATTR_geo_vs_instance_normal] = {.offset = offsetof(instance_t, normal),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_normal+1] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_normal+2] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_normal+3] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE}
             }
         },
         .index_type = SG_INDEXTYPE_UINT16,
