@@ -41,13 +41,13 @@ typedef struct {
 } mesh_t;
 
 typedef struct {
-    vec4f_t ambient_spec;   // rgb: ambient color, a: specular power
     sg_image albedo_rough;  // rgb: albedo, a: roughness
     trace_t trace;
 } material_t;
 
 typedef struct {
     vec4f_t color;
+    //@tod0: vec4f_t uv_pan_scale
     mat4f_t pose;
     mat4f_t normal;
 } instance_t;
@@ -107,7 +107,6 @@ typedef struct {
     uint16_t width;
     uint16_t height;
     uint32_t* pixels;
-    vec4f_t ambient_spec;
     const char* label;
 } material_desc_t;
 

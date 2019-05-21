@@ -1,22 +1,26 @@
 //------------------------------------------------------------------------------
-//  sgui.cc
-//  Implementation file for the generic debug UI overlay, using 
-//  the sokol_imgui.h utility header which implements the Dear ImGui
-//  glue code.
+//  cdbgui.cc
+//  Implementation file for the generic debug UI overlay, using the
+//  C sokol_cimgui.h, sokol_gfx_cimgui.h and the C Dear ImGui bindings
+//  cimgui.h
 //------------------------------------------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "sokol_gfx.h"
 #include "sokol_app.h"
-#include "imgui.h"
 
-#define SOKOL_IMGUI_IMPL
-#include "sokol_imgui.h"
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#include "cimgui/cimgui.h"
+
+#define SOKOL_CIMGUI_IMPL
+#include "sokol_cimgui.h"
 
 #include "sgui.h"
 
+#if defined(__cplusplus)
 extern "C" {
+#endif
 
 static sgui_desc_t sgui_descs[SGUI_MAX_DESCRIPTORS] = {0};
 static size_t sgui_desc_count = 0;
@@ -52,48 +56,50 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     SGUI_CALL_DESC_FUNC(init_cb)
 
     // setup the sokol-imgui utility header
-    simgui_desc_t simgui_desc = { };
-    simgui_desc.sample_count = sample_count;
-    simgui_desc.dpi_scale = dpi_scale;
-    simgui_setup(&simgui_desc);
+    scimgui_desc_t scimgui_desc = {0};
+    scimgui_desc.sample_count = sample_count;
+    scimgui_desc.dpi_scale = dpi_scale;
+    scimgui_setup(&scimgui_desc);
 }
 
 void sgui_shutdown() {
-    simgui_shutdown();
+    scimgui_shutdown();
     SGUI_CALL_DESC_FUNC(shutdown_cb)
 }
 
 void sgui_draw_menu() {
-    if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("Viewer")) {
-            bool exit_app = false;
-            ImGui::MenuItem("Exit", "Esc", &exit_app);
-            ImGui::EndMenu();
-            
-            if (exit_app) {
-                exit(EXIT_SUCCESS);
-            }
-        }
+    bool exit_app = false;
+    if (igBeginMainMenuBar()) {
+        if (igBeginMenu("Viewer", true)) {
 
-        SGUI_CALL_DESC_FUNC(menu_cb)
+            igMenuItemBoolPtr("Exit", "Esc", &exit_app, true);
+            igEndMenu();
+        }
         
-        ImGui::EndMainMenuBar();
+        SGUI_CALL_DESC_FUNC(menu_cb)
+        igEndMainMenuBar();
+    }
+           
+    if (exit_app) {
+        exit(EXIT_SUCCESS);
     }
 }
 
 void sgui_draw(bool show_menu) {
-    simgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
+    scimgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
 
     if (show_menu) {
         sgui_draw_menu();
     }
     
     SGUI_CALL_DESC_FUNC(draw_cb)
-    simgui_render();
+    scimgui_render();
 }
 
 void sgui_event(const sapp_event* e) {
-    simgui_handle_event(e);
+    scimgui_handle_event(e);
 }
 
-} // extern "C"
+#if defined(__cplusplus)
+} // extern C
+#endif

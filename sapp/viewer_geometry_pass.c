@@ -50,7 +50,6 @@ static bool mesh_is_empty(const mesh_t* mesh) {
 }
 
 const static material_t empty_material = {
-    .ambient_spec = {0},
     .albedo_rough = -1,
     .trace = {0}
 };
@@ -233,7 +232,6 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
 
     // create the graphics material resources
     material_t mat = {
-        .ambient_spec = material_desc->ambient_spec,
         .albedo_rough = sg_make_image(&(sg_image_desc){
             .width = material_desc->width,
             .height = material_desc->height,
@@ -269,7 +267,6 @@ material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
         .width = 4,
         .height = 4,
         .pixels = checkerboard_pixels,
-        .ambient_spec = (vec4f_t){1.f,1.f,1.f,0.f},
         .label = "default-material"
     });
 }

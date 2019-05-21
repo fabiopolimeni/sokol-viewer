@@ -13,3 +13,7 @@ imports:
     git: https://github.com/fabiopolimeni/fips-mathc.git
   fips-tinyobjloader-c:
     git: https://github.com/fabiopolimeni/fips-tinyobjloader-c.git
+  sokol-tools-bin:
+    git: https://github.com/floooh/sokol-tools-bin
+  fips-cimgui:
+    git: https://github.com/fips-libs/fips-cimgui.git
