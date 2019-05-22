@@ -163,6 +163,12 @@ static int32_t create_box(int32_t parent_id) {
                 .z = rnd(0.0f, 1.0f),
                 .w = 1.0f
             },
+            .tile = (vec4f_t){
+                .x = rnd(2.5f, 0.5f),
+                .y = rnd(2.5f, 0.5f),
+                .z = .0f,
+                .w = .0f
+            },
             .model = boxes_group,
             .parent = parent,
             .label = node_trace.name

@@ -15,6 +15,7 @@ in vec3 vertex_norm;
 in vec2 vertex_uv;
 
 in vec4 instance_color;
+in vec4 instance_tile; // xy scaling + zw panning
 in mat4 instance_pose;
 in mat4 instance_normal;
 
@@ -22,6 +23,7 @@ out vec3 world_position;
 out vec3 world_normal;
 out vec3 world_eyepos;
 out vec3 world_lightdir;
+
 out vec4 color;
 out vec2 uv;
 
@@ -32,7 +34,7 @@ void main() {
   world_eyepos = eye_pos;
   world_lightdir = -light.xyz;
   color = instance_color;
-  uv = vertex_uv;
+  uv = vertex_uv * instance_tile.xy + instance_tile.zw;
   gl_Position = view_proj * instance_pose * position;
 }
 @end

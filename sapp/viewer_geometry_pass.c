@@ -416,6 +416,7 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
                 [ATTR_geo_vs_vertex_norm] = {.offset = offsetof(vertex_t, norm),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
                 [ATTR_geo_vs_vertex_uv] = {.offset = offsetof(vertex_t, uv),.format = SG_VERTEXFORMAT_FLOAT2,.buffer_index = BUFFER_INDEX_VERTEX},
                 [ATTR_geo_vs_instance_color] = {.offset = offsetof(instance_t, color),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
+                [ATTR_geo_vs_instance_tile] = {.offset = offsetof(instance_t, uv_scale_pan),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
                 // 4x4 matrices will span 4 attribute slots
                 [ATTR_geo_vs_instance_pose] = {.offset = offsetof(instance_t, pose),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
                 [ATTR_geo_vs_instance_pose+1] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},

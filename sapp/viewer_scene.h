@@ -24,6 +24,7 @@ typedef struct {
 typedef struct {
     transform_t transform;
     vec4f_t color;
+    vec4f_t tile;
     model_id_t model_id;
     node_id_t parent_id;
     trace_t trace;
@@ -58,6 +59,7 @@ void scene_cleanup(scene_t* scene);
 typedef struct {
     transform_t transform;
     vec4f_t color;
+    vec4f_t tile;
     model_id_t model;
     node_id_t parent;
     const char* label;

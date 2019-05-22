@@ -81,11 +81,6 @@ node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc) {
         return node_id;
     }
 
-    node_t* node = &scene->nodes[node_id.id];
-    node->model_id = desc->model;
-    node->transform = desc->transform;
-    node->color = desc->color;
-
     // if the parent node is empty, then,
     // detach and add this node to root.
     node_id_t parent = {.id = HANDLE_INVALID_ID};
@@ -93,8 +88,15 @@ node_id_t scene_add_node(scene_t* scene, const node_desc_t* desc) {
         && !node_is_empty(&scene->nodes[desc->parent.id])) {
         parent = desc->parent;
     }
-    
-    node->parent_id = parent;
+
+    node_t *node = &scene->nodes[node_id.id];
+    *node = (node_t){
+        .model_id = desc->model,
+        .transform = desc->transform,
+        .color = desc->color,
+        .tile = desc->tile,
+        .parent_id = parent
+    };
 
     trace_printf(&node->trace, desc->label);
     return node_id;
@@ -146,6 +148,7 @@ typedef struct {
     mat4f_t pose;
     transform_t transform;
     vec4f_t color;
+    vec4f_t tile;
     node_id_t node;
     node_id_t parent;
     model_id_t model;
@@ -170,12 +173,15 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
     for (int32_t i = 0; i < SCENE_MAX_NODES; ++i) {
         const node_t* node_ptr = &scene->nodes[i];
         if (!node_is_empty(node_ptr)) {
-            node_link_t* link = &links[nodes_count];
-            link->node = (node_id_t){.id=i};
-            link->parent = node_ptr->parent_id;
-            link->transform = node_ptr->transform;
-            link->color = node_ptr->color;
-            link->model = node_ptr->model_id;
+            links[nodes_count] = (node_link_t){
+                .transform = node_ptr->transform,
+                .color = node_ptr->color,
+                .tile = node_ptr->tile,
+                .node = (node_id_t){.id=i},
+                .model = node_ptr->model_id,
+                .parent = node_ptr->parent_id
+            };
+
             ++nodes_count;
         }
     }
@@ -224,14 +230,15 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
             }
         }
 
-        // set instance data for the render model
+        // set instance data for render model
         assert(handle_is_valid(link->model, GEOMETRY_PASS_MAX_MODELS));
         bucket_t* bucket = &buckets[link->model.id];
-        
-        instance_t *instance = &bucket->instances[bucket->instances_count++];
-        instance->color = link->color;
-        instance->pose = link->pose;
-        instance->normal = smat4_transpose(smat4_inverse(link->pose));
+        bucket->instances[bucket->instances_count++] = (instance_t){
+            .color = link->color,
+            .uv_scale_pan = link->tile,
+            .pose = link->pose,
+            .normal = smat4_transpose(smat4_inverse(link->pose))
+        };
     }
 
     // upload instance data to geometry pass

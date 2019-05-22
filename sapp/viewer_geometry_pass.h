@@ -47,7 +47,7 @@ typedef struct {
 
 typedef struct {
     vec4f_t color;
-    //@tod0: vec4f_t uv_pan_scale
+    vec4f_t uv_scale_pan;
     mat4f_t pose;
     mat4f_t normal;
 } instance_t;
