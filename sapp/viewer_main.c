@@ -158,16 +158,16 @@ static int32_t create_box(int32_t parent_id) {
                 })
             },
             .color = (vec4f_t){
-                .x = rnd(0.0f, 1.0f),
-                .y = rnd(0.0f, 1.0f),
-                .z = rnd(0.0f, 1.0f),
-                .w = 1.0f
+                .x = rnd(0.0f, 1.0f),   // r
+                .y = rnd(0.0f, 1.0f),   // g
+                .z = rnd(0.0f, 1.0f),   // b
+                .w = (float)(int)rnd(0.5f, 3.5f)    // uv's layer
             },
             .tile = (vec4f_t){
-                .x = rnd(2.5f, 0.5f),
-                .y = rnd(2.5f, 0.5f),
-                .z = .0f,
-                .w = .0f
+                .x = rnd(2.5f, 0.5f),  // scaling u
+                .y = rnd(2.5f, 0.5f),  // scaling v
+                .z = 0.0f,  // panning u
+                .w = 0.0f   // panning v
             },
             .model = boxes_group,
             .parent = parent,

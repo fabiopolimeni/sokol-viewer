@@ -106,6 +106,7 @@ void geometry_pass_destroy_mesh(geometry_pass_t* pass, mesh_id_t mesh);
 typedef struct {
     uint16_t width;
     uint16_t height;
+    uint16_t layers;
     uint32_t* pixels;
     const char* label;
 } material_desc_t;

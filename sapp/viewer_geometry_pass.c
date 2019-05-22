@@ -183,6 +183,7 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     assert(pass && material_desc);
     assert(material_desc->width > 0);
     assert(material_desc->height > 0);
+    assert(material_desc->layers > 0);
     
     material_id_t mat_id = {
         .id = HANDLE_INVALID_ID
@@ -206,16 +207,20 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     trace_t im_trace;
     trace_printf(&im_trace, "%s-%s", material_desc->label, "image");
 
-    // create the graphics material resources
+    // create graphics image resource
     material_t mat = {
         .albedo_rough = sg_make_image(&(sg_image_desc){
+            .type = SG_IMAGETYPE_ARRAY,
             .width = material_desc->width,
             .height = material_desc->height,
+            .layers = material_desc->layers,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
             .content.subimage[0][0] = {
                 .ptr = material_desc->pixels,
                 .size = sizeof(uint32_t) *
-                    material_desc->width * material_desc->height
+                    material_desc->width *
+                    material_desc->height *
+                    material_desc->layers
             },
             .label = im_trace.name
         })
@@ -232,17 +237,34 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
 material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
     assert(pass);
 
-    static uint32_t checkerboard_pixels[4*4] = {
+    static uint32_t images_pixels[4*4*4] = {
+        // checkboard
         0x99FFFFFF, 0xFF000000, 0x99FFFFFF, 0xFF000000,
         0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
         0x99FFFFFF, 0xFF000000, 0x99FFFFFF, 0xFF000000,
         0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        // horizontal lines
+        0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF,
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+        0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF,
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+        // vertical lines
+        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        // v-zag
+        0x99FFFFFF, 0xFF000000, 0xFF000000, 0xFF000000,
+        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0xFF000000, 0xFF000000, 0x99FFFFFF, 0xFF000000,
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
     };
 
     return geometry_pass_make_material(pass, &(material_desc_t) {
         .width = 4,
         .height = 4,
-        .pixels = checkerboard_pixels,
+        .layers = 4,
+        .pixels = images_pixels,
         .label = "default-material"
     });
 }

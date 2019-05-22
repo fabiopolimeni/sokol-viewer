@@ -14,8 +14,8 @@ in vec3 vertex_pos;
 in vec3 vertex_norm;
 in vec2 vertex_uv;
 
-in vec4 instance_color;
-in vec4 instance_tile; // xy scaling + zw panning
+in vec4 instance_color; // rgb: color, w: layer
+in vec4 instance_tile;  // xy:scaling, zw:panning
 in mat4 instance_pose;
 in mat4 instance_normal;
 
@@ -25,7 +25,7 @@ out vec3 world_eyepos;
 out vec3 world_lightdir;
 
 out vec4 color;
-out vec2 uv;
+out vec3 uv_layer;
 
 void main() {
   vec4 position = vec4(vertex_pos, 1.0);
@@ -33,8 +33,9 @@ void main() {
   world_normal = vec4(instance_normal * vec4(vertex_norm, 0.0)).xyz;
   world_eyepos = eye_pos;
   world_lightdir = -light.xyz;
-  color = instance_color;
-  uv = vertex_uv * instance_tile.xy + instance_tile.zw;
+  color = vec4(instance_color.xyz, 1.0);
+  uv_layer = vec3(vertex_uv * instance_tile.xy + instance_tile.zw,
+    instance_color.w);
   gl_Position = view_proj * instance_pose * position;
 }
 @end
@@ -44,14 +45,16 @@ layout(binding=0) uniform fs_params {
   vec4 ambient_spec;
 };
 
-layout(binding=0) uniform sampler2D albedo_rough;
+layout(binding=0) uniform sampler2DArray albedo_rough;
 
 in vec3 world_position;
 in vec3 world_normal;
 in vec3 world_eyepos;
 in vec3 world_lightdir;
+
 in vec4 color;
-in vec2 uv;
+in vec3 uv_layer;
+
 out vec4 frag_color;
 
 vec3 light(vec3 base_color, vec3 eye_vec, vec3 normal, vec3 light_vec) {
@@ -69,7 +72,7 @@ void main() {
   vec3 eye_vec = normalize(world_eyepos - world_position);
   vec3 nrm = normalize(world_normal);
   vec3 light_dir = normalize(world_lightdir);
-  vec3 albedo = texture(albedo_rough, uv).xyz;
+  vec3 albedo = texture(albedo_rough, uv_layer).xyz;
   vec3 base_color = albedo * color.xyz;
   frag_color = vec4(light(base_color, eye_vec, nrm, light_dir), 1.0);
 }
