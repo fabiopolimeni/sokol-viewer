@@ -8,36 +8,11 @@
 
 #define BUFFER_INDEX_VERTEX 0
 #define BUFFER_INDEX_INSTANCE 1
-// #define UNIFORM_BLOCK_INDEX 0
-// #define VS_UNIFORM_INDEX_VIEW_PROJ 0
-// #define VS_UNIFORM_INDEX_LIGHT 1
-// #define VS_UNIFORM_INDEX_EYE_POS 2
-// #define FS_UNIFORM_INDEX_AMBIENT_SPEC 0
-// #define SAMPLER_INDEX_ALBEDO 0
-// #define ATTR_INDEX_VERTEX_POS 0
-// #define ATTR_INDEX_VERTEX_NORM 1
-// #define ATTR_INDEX_VERTEX_UV 2
-// #define ATTR_INDEX_INSTANCE_COLOR 3
-// #define ATTR_INDEX_INSTANCE_POSE 4     // mat4 takes 4 slots
-// #define ATTR_INDEX_INSTANCE_NORMAL 8   // mat4 takes 4 slots
 #define RASTERIZER_MSAA_SAMPLES 1
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-extern const char* geometry_vs_src;
-extern const char* geometry_fs_src;
-
-typedef struct {
-    mat4f_t view_proj;
-    vec4f_t light;
-    vec3f_t eye_pos;
-} vs_uniforms_t;
-
-typedef struct {
-    vec4f_t ambient_spec;
-} fs_uniforms_t;
 
 const static mesh_t empty_mesh = {
     .num_elements = 0,
@@ -428,42 +403,6 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
     render_pass->uniforms.fs_ubo.size = sizeof(fs_params_t);
 
     // init shaders
-    // render_pass->shader = sg_make_shader(&(sg_shader_desc) {
-    //     .attrs = {
-    //         [ATTR_INDEX_VERTEX_POS] = { .name="vertex_pos", .sem_name="POSITION" },
-    //         [ATTR_INDEX_VERTEX_NORM] = { .name="vertex_norm", .sem_name="NORMAL" },
-    //         [ATTR_INDEX_VERTEX_UV] = { .name="vertex_uv", .sem_name="UV" },
-    //         [ATTR_INDEX_INSTANCE_COLOR] = { .name="instance_color", .sem_name="COLOR" },
-    //         [ATTR_INDEX_INSTANCE_POSE] = { .name="instance_pose", .sem_name="POSE" },
-    //         [ATTR_INDEX_INSTANCE_NORMAL] = { .name="instance_normal", .sem_name="INVTRANS_POSE" }
-    //     },
-    //     .vs = {
-    //         .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
-    //             .size = render_pass->uniforms.vs_ubo.size,
-    //             .uniforms = {
-    //                 [VS_UNIFORM_INDEX_VIEW_PROJ] = { .name="view_proj", .type=SG_UNIFORMTYPE_MAT4 },
-    //                 [VS_UNIFORM_INDEX_LIGHT] = { .name="light", .type=SG_UNIFORMTYPE_FLOAT4 },
-    //                 [VS_UNIFORM_INDEX_EYE_POS] = { .name="eye_pos", .type=SG_UNIFORMTYPE_FLOAT3 }
-    //             }
-    //         },
-    //         .source = geometry_vs_src
-    //     },
-    //     .fs = {
-    //         .uniform_blocks[UNIFORM_BLOCK_INDEX] = {
-    //             .size = render_pass->uniforms.fs_ubo.size,
-    //             .uniforms = {
-    //                 [FS_UNIFORM_INDEX_AMBIENT_SPEC] = { .name="ambient_spec", .type=SG_UNIFORMTYPE_FLOAT4 },
-    //             }
-    //         },
-    //         .images[SAMPLER_INDEX_ALBEDO] = {
-    //             .name = "albedo_rough",
-    //             .type = SG_IMAGETYPE_2D
-    //         },
-    //         .source = geometry_fs_src
-    //     },
-    //     .label = "geometry-pass-shader"
-    // });
-
     render_pass->shader = sg_make_shader(geometry_pass_shader_desc());
 
     // init pipeline

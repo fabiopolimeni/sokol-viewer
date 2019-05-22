@@ -4,7 +4,6 @@
 @ctype vec2 vec2f_t
 
 @vs geo_vs
-
 layout(binding=0) uniform vs_params {
   mat4 view_proj;
   vec4 light;
