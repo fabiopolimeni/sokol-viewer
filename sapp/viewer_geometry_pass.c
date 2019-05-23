@@ -499,7 +499,12 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
             .depth_write_enabled = true,
         },
         .blend = {
+            .enabled = true,
             .depth_format = SG_PIXELFORMAT_DEPTHSTENCIL,
+            .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+            .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            .src_factor_alpha = SG_BLENDFACTOR_ONE,
+            .dst_factor_alpha = SG_BLENDFACTOR_ZERO,
         },
         .rasterizer = {
             .cull_mode = SG_CULLMODE_BACK,

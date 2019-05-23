@@ -4,6 +4,7 @@ sokol_config()
 
 add_definitions(-DSOKOL_NO_DEPRECATED)
 
+add_subdirectory(atlas)
 add_subdirectory(sokol)
 add_subdirectory(ui)
 add_subdirectory(tinyobjloader)

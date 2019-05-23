@@ -1,7 +1,7 @@
 fips_begin_lib(tinyobjloader)
 if (FIPS_MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
     fips_vs_warning_level(3)
+endif()
     fips_files(tinyobjloader.c)
 fips_end_lib()

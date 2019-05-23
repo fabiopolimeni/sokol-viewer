@@ -25,8 +25,8 @@ typedef struct {
     wavefront_mesh_t* meshes;
     const vec4f_t* colors;
     const char** tex_names;
-    const char** shape_names;
-    int32_t num_shapes;
+    const char** group_names;
+    int32_t num_groups;
 } wavefront_obj_t;
 
 wavefront_obj_t wavefront_load_obj(const wavefront_data_t* data);
