@@ -1,0 +1,7 @@
+fips_begin_lib(atlas_packer)
+if (FIPS_MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    fips_vs_warning_level(3)
+endif()
+    fips_files(linked_list_hashmap.c texture_atlas.c)
+fips_end_lib()
