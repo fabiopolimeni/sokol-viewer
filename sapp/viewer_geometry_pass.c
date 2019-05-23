@@ -26,7 +26,8 @@ static bool mesh_is_empty(const mesh_t* mesh) {
 }
 
 const static material_t empty_material = {
-    .albedo_rough = -1,
+    .albedo_transparency = -1,
+    .emissive_specular = -1,
     .trace = {0}
 };
 
@@ -181,9 +182,14 @@ void geometry_pass_destroy_mesh(geometry_pass_t* pass, mesh_id_t mesh) {
 material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     const material_desc_t* material_desc) {
     assert(pass && material_desc);
-    assert(material_desc->width > 0);
-    assert(material_desc->height > 0);
-    assert(material_desc->layers > 0);
+    assert(material_desc->albedo);
+    assert(material_desc->albedo->width > 0);
+    assert(material_desc->albedo->height > 0);
+    assert(material_desc->albedo->layers > 0);
+    assert(material_desc->emissive);
+    assert(material_desc->emissive->width > 0);
+    assert(material_desc->emissive->height > 0);
+    assert(material_desc->emissive->layers > 0);
     
     material_id_t mat_id = {
         .id = HANDLE_INVALID_ID
@@ -204,25 +210,45 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     }
 
     // create temporary trace for image label
-    trace_t im_trace;
-    trace_printf(&im_trace, "%s-%s", material_desc->label, "image");
+    trace_t im_albedo_trace;
+    trace_printf(&im_albedo_trace,
+        "%s-%s", material_desc->label, "image-at");
+
+    trace_t im_emissive_trace;
+    trace_printf(&im_emissive_trace,
+        "%s-%s", material_desc->label, "image-es");
 
     // create graphics image resource
     material_t mat = {
-        .albedo_rough = sg_make_image(&(sg_image_desc){
+        .albedo_transparency = sg_make_image(&(sg_image_desc){
             .type = SG_IMAGETYPE_ARRAY,
-            .width = material_desc->width,
-            .height = material_desc->height,
-            .layers = material_desc->layers,
+            .width = material_desc->albedo->width,
+            .height = material_desc->albedo->height,
+            .layers = material_desc->albedo->layers,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
             .content.subimage[0][0] = {
-                .ptr = material_desc->pixels,
+                .ptr = material_desc->albedo->pixels,
                 .size = sizeof(uint32_t) *
-                    material_desc->width *
-                    material_desc->height *
-                    material_desc->layers
+                    material_desc->albedo->width *
+                    material_desc->albedo->height *
+                    material_desc->albedo->layers
             },
-            .label = im_trace.name
+            .label = im_albedo_trace.name
+        }),
+        .emissive_specular = sg_make_image(&(sg_image_desc){
+            .type = SG_IMAGETYPE_ARRAY,
+            .width = material_desc->emissive->width,
+            .height = material_desc->emissive->height,
+            .layers = material_desc->emissive->layers,
+            .pixel_format = SG_PIXELFORMAT_RGBA8,
+            .content.subimage[0][0] = {
+                .ptr = material_desc->emissive->pixels,
+                .size = sizeof(uint32_t) *
+                    material_desc->emissive->width *
+                    material_desc->emissive->height *
+                    material_desc->emissive->layers
+            },
+            .label = im_emissive_trace.name
         })
     };
 
@@ -237,34 +263,49 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
 material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
     assert(pass);
 
-    static uint32_t images_pixels[4*4*4] = {
+    static uint32_t color_alpha[4*4*4] = {
         // checkboard
-        0x99FFFFFF, 0xFF000000, 0x99FFFFFF, 0xFF000000,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
-        0x99FFFFFF, 0xFF000000, 0x99FFFFFF, 0xFF000000,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
         // horizontal lines
-        0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF,
-        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
-        0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF, 0x99FFFFFF,
-        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
         // vertical lines
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
         // v-zag
-        0x99FFFFFF, 0xFF000000, 0xFF000000, 0xFF000000,
-        0xFF000000, 0x99FFFFFF, 0xFF000000, 0x99FFFFFF,
-        0xFF000000, 0xFF000000, 0x99FFFFFF, 0xFF000000,
+        0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    };
+
+    static uint32_t emissive_specular[4*4*1] = {
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+        0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
         0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
     };
 
     return geometry_pass_make_material(pass, &(material_desc_t) {
-        .width = 4,
-        .height = 4,
-        .layers = 4,
-        .pixels = images_pixels,
+        .albedo = &(image_desc_t) {
+            .width = 4,
+            .height = 4,
+            .layers = 4,
+            .pixels = color_alpha
+        },
+        .emissive = &(image_desc_t) {
+            .width = 4,
+            .height = 4,
+            .layers = 1,
+            .pixels = emissive_specular
+        },
         .label = "default-material"
     });
 }
@@ -346,7 +387,8 @@ model_id_t geometry_pass_create_model(geometry_pass_t* pass,
         });
 
     const material_t* mat = &pass->materials[model.material_id.id];
-    draw->bindings.fs_images[SLOT_albedo_rough] = mat->albedo_rough;
+    draw->bindings.fs_images[SLOT_albedo_transparency] = mat->albedo_transparency;
+    draw->bindings.fs_images[SLOT_emissive_specular] = mat->emissive_specular;
 
     return model_id;
 }
@@ -421,7 +463,7 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
 
     render_pass->uniforms.fs_ubo.index = SLOT_fs_params;
     render_pass->uniforms.fs_ubo.data = (uint8_t*)&geometry_pass->globals + 
-        offsetof(globals_t, ambient_spec);
+        offsetof(globals_t, ambient);
     render_pass->uniforms.fs_ubo.size = sizeof(fs_params_t);
 
     // init shaders

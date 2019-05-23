@@ -42,8 +42,8 @@ typedef struct {
 
 typedef struct {
     vec4f_t plane;
-    vec3f_t ambient;
-    mfloat_t specular;
+    vec3f_t color;
+    mfloat_t intensity;
 } light_t;
 
 typedef struct {

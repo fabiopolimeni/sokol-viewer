@@ -64,6 +64,9 @@ static material_id_t default_mat = {HANDLE_INVALID_ID};
 static model_id_t boxes_group = {HANDLE_INVALID_ID};
 static node_id_t box_nodes[MAX_BOXES];
 
+static vec3f_t ambient_color = {0.4f, 0.6f, 0.7f};
+//static vec3f_t ambient_color = {1.0f, 1.0f, 1.0f};
+
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
 
@@ -99,8 +102,8 @@ static void setup_scene() {
 
     scene.light = (light_t){
         .plane = (vec4f_t){-1.f, -1.f, -.4f, 0.f},
-        .ambient = (vec3f_t){0.1f,0.1f,0.1f},
-        .specular = 16.f
+        .color = ambient_color,
+        .intensity = 16.f
     };
         
     scene.root = smat4_identity();
@@ -158,11 +161,17 @@ static int32_t create_box(int32_t parent_id) {
                 })
             },
             .color = (vec4f_t){
-                .x = rnd(0.0f, 1.0f),   // r
-                .y = rnd(0.0f, 1.0f),   // g
-                .z = rnd(0.0f, 1.0f),   // b
+                .x = rnd(0.2f, 1.0f),   // r
+                .y = rnd(0.2f, 1.0f),   // g
+                .z = rnd(0.2f, 1.0f),   // b
                 .w = (float)(int)rnd(0.5f, 3.5f)    // uv's layer
             },
+            // .color = (vec4f_t){
+            //     .x = 1.0f,   // r
+            //     .y = 1.0f,   // g
+            //     .z = 1.0f,   // b
+            //     .w = 0.0f    // uv's layer
+            // },
             .tile = (vec4f_t){
                 .x = rnd(2.5f, 0.5f),  // scaling u
                 .y = rnd(2.5f, 0.5f),  // scaling v
@@ -248,7 +257,12 @@ void frame(void) {
     update_scene();
 
     render_begin(&(clear_desc_t){
-        .color = (vec4f_t){0.4f,0.6f,0.7f,1.f},
+        .color = (vec4f_t){
+            .x = ambient_color.x,
+            .y = ambient_color.y,
+            .z = ambient_color.z,
+            .w = 1.0f
+        },
         .depth = 1.f,
         .stencil = 0
     }, &(viewport_desc_t) {

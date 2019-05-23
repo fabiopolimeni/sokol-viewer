@@ -17,18 +17,13 @@ typedef struct {
 } wavefront_mesh_t;
 
 typedef struct {
-    uint16_t width;
-    uint16_t height;
-    uint32_t* pixels;
-} wavefront_image_t;
-
-typedef struct {
     const void* obj_data;
     int32_t data_size;
 } wavefront_data_t;
 
 typedef struct {
     wavefront_mesh_t* meshes;
+    const vec4f_t* colors;
     const char** tex_names;
     const char** shape_names;
     int32_t num_shapes;
@@ -37,8 +32,20 @@ typedef struct {
 wavefront_obj_t wavefront_load_obj(const wavefront_data_t* data);
 
 typedef struct {
-    const wavefront_mesh_t* meshes;
-    const wavefront_image_t* images;
+    uint16_t width;
+    uint16_t height;
+    uint32_t* pixels;
+} wavefront_image_t;
+
+typedef struct {
+    const wavefront_mesh_t* mesh;
+    const wavefront_image_t* diffuseRGB_alphaA;
+    const wavefront_image_t* emissiveXYZ_specularW;
+    const wavefront_image_t* normalXY_dispZ_aoW;
+} wavefront_shape_t;
+
+typedef struct {
+    const wavefront_shape_t* shapes;
     int32_t num_shapes;
     const char* label;
 } wavefront_model_t;

@@ -274,14 +274,14 @@ void scene_update_geometry_pass(const scene_t* scene, geometry_pass_t* pass) {
 
     pass->globals = (globals_t){
         .view_proj = smat4_multiply(proj, view),
+        .ambient = (vec4f_t){
+            .x = scene->light.color.x,
+            .y = scene->light.color.y,
+            .z = scene->light.color.z,
+            .w = scene->light.intensity
+        },
         .light = scene->light.plane,
         .eye_pos = scene->camera.eye_pos,
-        .ambient_spec = (vec4f_t){
-            .x = scene->light.ambient.x,
-            .y = scene->light.ambient.y,
-            .z = scene->light.ambient.z,
-            .w = scene->light.specular,
-        }
     };
 
     update_instances(scene, pass);

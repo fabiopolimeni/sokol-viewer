@@ -41,7 +41,8 @@ typedef struct {
 } mesh_t;
 
 typedef struct {
-    sg_image albedo_rough;  // rgb: albedo, a: roughness
+    sg_image albedo_transparency;  // rgb: albedo, a: transparency
+    sg_image emissive_specular;  // rgb: emissive, a: specular power
     trace_t trace;
 } material_t;
 
@@ -60,9 +61,9 @@ typedef struct {
 
 typedef struct {
     mat4f_t view_proj;
+    vec4f_t ambient;
     vec4f_t light;
     vec3f_t eye_pos;
-    vec4f_t ambient_spec;
 } globals_t;
 
 typedef struct {
@@ -108,6 +109,11 @@ typedef struct {
     uint16_t height;
     uint16_t layers;
     uint32_t* pixels;
+} image_desc_t;
+
+typedef struct {
+    const image_desc_t* albedo;
+    const image_desc_t* emissive;
     const char* label;
 } material_desc_t;
 
