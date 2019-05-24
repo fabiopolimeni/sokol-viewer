@@ -3,6 +3,7 @@
 //------------------------------------------------------------------------------
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "sokol_args.h"
 #include "sokol_app.h"
@@ -15,7 +16,10 @@
 #include "viewer_math.h"
 #include "viewer_render.h"
 #include "viewer_scene.h"
+#include "viewer_file.h"
 #include "viewer_geometry_pass.h"
+#include "viewer_memory.h"
+#include "viewer_wavefront.h"
 
 #define MSAA_SAMPLES 1
 #define MAX_BOXES 10
@@ -59,10 +63,14 @@ static render_pass_t render_pass = {0};
 static geometry_pass_t geometry_pass = {0};
 static scene_t scene = {0};
 
-static mesh_id_t box_mesh = {HANDLE_INVALID_ID};
-static material_id_t default_mat = {HANDLE_INVALID_ID};
-static model_id_t boxes_group = {HANDLE_INVALID_ID};
-static node_id_t box_nodes[MAX_BOXES];
+static material_id_t default_mat_id = {HANDLE_INVALID_ID};
+
+static mesh_id_t box_mesh_id = {HANDLE_INVALID_ID};
+static model_id_t box_model_id = {HANDLE_INVALID_ID};
+static node_id_t box_node_ids[MAX_BOXES];
+
+static model_id_t wf_model_id = {HANDLE_INVALID_ID};
+static node_id_t wf_node_id = {HANDLE_INVALID_ID};
 
 static vec3f_t ambient_color = {0.4f, 0.6f, 0.7f};
 //static vec3f_t ambient_color = {1.0f, 1.0f, 1.0f};
@@ -70,8 +78,9 @@ static vec3f_t ambient_color = {0.4f, 0.6f, 0.7f};
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
 
-    default_mat = geometry_pass_make_material_default(&geometry_pass);
-    box_mesh = geometry_pass_make_mesh_box(&geometry_pass,
+    default_mat_id = geometry_pass_make_material_default(&geometry_pass);
+    
+    box_mesh_id = geometry_pass_make_mesh_box(&geometry_pass,
         &(mesh_box_desc_t){
            .width = 1.f,
            .height = 1.f,
@@ -79,10 +88,10 @@ static void setup_render() {
            .label = "box-mesh" 
         });
 
-    boxes_group = geometry_pass_create_model(&geometry_pass, 
+    box_model_id = geometry_pass_create_model(&geometry_pass, 
         &(model_desc_t){
-            .mesh = box_mesh,
-            .material = default_mat,
+            .mesh = box_mesh_id,
+            .material = default_mat_id,
             .label = "box-group"
         });
 }
@@ -107,7 +116,7 @@ static void setup_scene() {
     };
         
     scene.root = smat4_identity();
-    memset(box_nodes, HANDLE_INVALID_ID, sizeof(box_nodes));
+    memset(box_node_ids, HANDLE_INVALID_ID, sizeof(box_node_ids));
 }
 
 static void update_scene() {
@@ -119,12 +128,12 @@ static void draw_scene() {
 }
 
 // return the index at which the node has
-// been added into the box_nodes array
+// been added into the box_node_ids array
 static int32_t create_box(int32_t parent_id) {
     // find first available box slot
     int32_t box_id = HANDLE_INVALID_ID;
     for (int32_t b = 0; b < MAX_BOXES; ++b) {
-        if (!handle_is_valid(box_nodes[b], SCENE_MAX_NODES)) {
+        if (!handle_is_valid(box_node_ids[b], SCENE_MAX_NODES)) {
             box_id = b;
             break;
         }
@@ -139,10 +148,10 @@ static int32_t create_box(int32_t parent_id) {
         };
 
         if (parent_id > 0 && parent_id < MAX_BOXES) {
-            parent = box_nodes[parent_id];
+            parent = box_node_ids[parent_id];
         }
 
-        box_nodes[box_id] = scene_add_node(&scene, &(node_desc_t){
+        box_node_ids[box_id] = scene_add_node(&scene, &(node_desc_t){
             .transform = (transform_t){
                 .position = (vec3f_t){
                     .x = rnd(-6.0f, 6.0f),
@@ -178,13 +187,13 @@ static int32_t create_box(int32_t parent_id) {
                 .z = 0.0f,  // panning u
                 .w = 0.0f   // panning v
             },
-            .model = boxes_group,
+            .model = box_model_id,
             .parent = parent,
             .label = node_trace.name
         });
 
         LOG_INFO("INFO: Box (pos:%d, node:%d) added to the scene",
-            box_id, box_nodes[box_id].id);
+            box_id, box_node_ids[box_id].id);
     }
 
     return box_id;
@@ -198,7 +207,7 @@ static int32_t destroy_box(int32_t box_id, bool recursive) {
     // for the first full slot to free
     if (box_id < 0) {
         for (int32_t b = 0; b < MAX_BOXES; ++b) {
-            if (handle_is_valid(box_nodes[b], SCENE_MAX_NODES)) {
+            if (handle_is_valid(box_node_ids[b], SCENE_MAX_NODES)) {
                 box_id = b;
                 break;
             }
@@ -206,15 +215,15 @@ static int32_t destroy_box(int32_t box_id, bool recursive) {
     }
 
     if (box_id < MAX_BOXES) {
-        scene_remove_node(&scene, box_nodes[box_id], recursive);
+        scene_remove_node(&scene, box_node_ids[box_id], recursive);
 
         // iterate throught the box nodes to check whether
         // the pointed node is still alive or not, as it can
         // have been removed by the routine, and therefore it
         // needs to be cleared up from the boxes array.
         for (int32_t b = 0; b < MAX_BOXES; ++b) {
-            if (!scene_node_is_alive(&scene, box_nodes[b])) {
-                box_nodes[box_id].id = HANDLE_INVALID_ID;
+            if (!scene_node_is_alive(&scene, box_node_ids[b])) {
+                box_node_ids[box_id].id = HANDLE_INVALID_ID;
             }
             else {
                 ++alive_boxes;
@@ -223,6 +232,63 @@ static int32_t destroy_box(int32_t box_id, bool recursive) {
     }
 
     return alive_boxes;
+}
+
+model_id_t load_wavefront_model(const char* filename) {
+    assert(filename);
+
+    file_t file_model = file_open(filename, FILE_OPEN_READ|FILE_OPEN_BINARY);
+    if (!file_is_valid(file_model)) {
+        return (model_id_t){.id=HANDLE_INVALID_ID};
+    }
+
+    char* buffer_data = NULL;
+    size_t buffer_size = 0;
+    if (FILE_READALL_OK == file_readall(
+        file_model, &buffer_data, &buffer_size, memory_realloc)) {
+        assert(buffer_size < INT32_MAX);
+        file_close(file_model);
+
+        wavefront_model_t* wf_model = {0};
+        wavefront_result_t wf_result = wavefront_parse_obj(&(wavefront_data_t){
+            .allocator = memory_realloc,
+            .obj_data = buffer_data,
+            .data_size = (int32_t)buffer_size,
+            .atlas_width = 1024,
+            .atlas_height = 1024,
+            .import_options = WAVEFRONT_IMPORT_DEFAULT
+        }, wf_model);
+
+        if (WAVEFRONT_RESULT_OK == wf_result) {
+            model_id_t model_id = wavefront_make_model(
+                &geometry_pass, wf_model);
+            wavefront_release_obj(wf_model);
+            return model_id;
+        }
+    }
+
+    file_close(file_model);
+    return (model_id_t){.id=HANDLE_INVALID_ID};
+}
+
+node_id_t add_wavefront_to_scene(model_id_t model_id) {
+    return scene_add_node(&scene, &(node_desc_t){
+        .transform = (transform_t){
+            .position = svec3_zero(),
+            .scale = svec3_one(),
+            .rotation = squat_null()
+        },
+        .color = svec4_one(),
+        .tile = (vec4f_t){
+            .x = 1.0f,  // scaling u
+            .y = 1.0f,  // scaling v
+            .z = 0.0f,  // panning u
+            .w = 0.0f   // panning v
+        },
+        .model = model_id,
+        .parent = (node_id_t){.id=HANDLE_INVALID_ID},
+        .label = "wavefront_node"
+    });
 }
 
 void init(void) {
@@ -317,11 +383,29 @@ void event(const sapp_event* ev) {
         app.render_scene = !app.render_scene;
     }
 
-    // create a new box (Ctrl+B)
+    // create a new box node (Ctrl+B)
     if ((ev->key_code == SAPP_KEYCODE_B)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
         && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
         create_box(HANDLE_INVALID_ID);
+    }
+
+    // load the wavefront model (W)
+    if ((ev->key_code == SAPP_KEYCODE_W)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
+        wf_model_id = load_wavefront_model(
+            sargs_value_def("wf",
+                "assets/models/cyberpunk_bar/cyberpunk_bar.obj"));
+    }
+
+    // add the wavefront model to the scene (Ctrl+W)
+    if ((ev->key_code == SAPP_KEYCODE_W)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
+        && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
+        if (handle_is_valid(wf_model_id, GEOMETRY_PASS_MAX_MODELS)
+            && !handle_is_valid(wf_node_id, SCENE_MAX_NODES)) {
+            wf_node_id = add_wavefront_to_scene(wf_model_id);
+        }
     }
 
     sgui_event(ev);
@@ -346,184 +430,3 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Viewer (sokol app)",
     };
 }
-
-
-    // // create the cube scene group
-    // cube_mesh = mesh_make_cube();
-    // cube_mat.albedo = sg_make_image(&(sg_image_desc){
-    //     .width = 4,
-    //     .height = 4,
-    //     .pixel_format = SG_PIXELFORMAT_RGBA8,
-    //     .content.subimage[0][0] = {
-    //         .ptr = checkerboard_pixels,
-    //         .size = sizeof(checkerboard_pixels)
-    //     },
-    //     .label = "checkerboard-texture"
-    // });
-
-//     cubes_group = scene_create_group(&scene, cube_mesh, cube_mat);
-
-//     // create several cube instances
-//     for (int32_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
-//         mat4f_t pose = smat4_translate(smat4_identity(), 
-//             (vec3f_t) {
-//                 .x = rnd(-6.0f, 6.0f),
-//                 .y = rnd(-3.0f, 3.0f),
-//                 .z = rnd(-3.0f, 3.0f)
-//             });
-
-//         vec4f_t color = (vec4f_t) {
-//             .x = rnd(0.0f, 1.0f),
-//             .y = rnd(0.0f, 1.0f),
-//             .z = rnd(0.0f, 1.0f),
-//             .w = 1.0f
-//         };
-
-//         cube_ids[i] = scene_add_instance(&scene, cubes_group, pose, color);
-//     }
-
-// static void setup_renderer() {
-//     render_pass.pass_action = (sg_pass_action) {
-//         .colors[0] = { 
-//             .action=SG_ACTION_CLEAR,
-//             .val={0.6f, 0.8f, 0.0f, 1.0f}
-//         }
-//     };
-
-//     render_pass.shader = sg_make_shader(&(sg_shader_desc) {
-//         .attrs = {
-//             [ATTR_INDEX_VERTEX_POS] = { .name="vertex_pos", .sem_name="POSITION" },
-//             [ATTR_INDEX_VERTEX_NORM] = { .name="vertex_norm", .sem_name="NORMAL" },
-//             [ATTR_INDEX_VERTEX_UV] = { .name="vertex_uv", .sem_name="UV" },
-//             [ATTR_INDEX_INSTANCE_COLOR] = { .name="instance_color", .sem_name="COLOR" },
-//             [ATTR_INDEX_INSTANCE_POSE] = { .name="instance_pose", .sem_name="POSE" },
-//             [ATTR_INDEX_INSTANCE_NORMAL] = { .name="instance_normal", .sem_name="INVTRANS_POSE" }
-//         },
-//         .vs = {
-//             .uniform_blocks[0] = {
-//                 .size = sizeof(uniforms_t),
-//                 .uniforms = {
-//                     [UNIFORM_INDEX_VIEW_PROJ] = { .name="view_proj", .type=SG_UNIFORMTYPE_MAT4 },
-//                     [UNIFORM_INDEX_LIGHT] = { .name="light", .type=SG_UNIFORMTYPE_FLOAT4 },
-//                     [UNIFORM_INDEX_EYE_POS] = { .name="eye_pos", .type=SG_UNIFORMTYPE_FLOAT3 }
-//                 }
-//             },
-//             .source = vs_src
-//         },
-//         .fs = {
-//             .images[SAMPLER_INDEX_ALBEDO] = {
-//                 .name = "albedo_tex",
-//                 .type = SG_IMAGETYPE_2D
-//             },
-//             .source = fs_src
-//         },
-//         .label = "phong-instancing-shader"
-//     });
-
-//     render_pass.bindings = (sg_bindings) {
-//         // mesh vertex and index buffers
-//         .vertex_buffers[BUFFER_INDEX_VERTEX] = cube_mesh.vbuf,
-//         .index_buffer = cube_mesh.ibuf,
-    
-//         // instance buffer goes into vertex-buffer-slot 
-//         .vertex_buffers[BUFFER_INDEX_INSTANCE] =
-//             sg_make_buffer(&(sg_buffer_desc) {
-//                 .size = MAX_CUBE_INSTANCES * sizeof(instance_t),
-//                 .usage = SG_USAGE_STREAM,
-//                 .label = "instance-data"
-//         }),
-
-//         // sampler bindings 
-//         .fs_images[SAMPLER_INDEX_ALBEDO] = cube_mat.albedo
-//     };
-
-//     render_pass.pipeline = sg_make_pipeline(&(sg_pipeline_desc) {
-//         .shader = render_pass.shader,
-//         .layout = {
-//             .buffers[BUFFER_INDEX_VERTEX].step_func = SG_VERTEXSTEP_PER_VERTEX,
-//             .buffers[BUFFER_INDEX_INSTANCE].step_func = SG_VERTEXSTEP_PER_INSTANCE,
-//             .attrs = {
-//                 [ATTR_INDEX_VERTEX_POS] = {.offset = offsetof(vertex_t, pos),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
-//                 [ATTR_INDEX_VERTEX_NORM] = {.offset = offsetof(vertex_t, norm),.format = SG_VERTEXFORMAT_FLOAT3,.buffer_index = BUFFER_INDEX_VERTEX},
-//                 [ATTR_INDEX_VERTEX_UV] = {.offset = offsetof(vertex_t, uv),.format = SG_VERTEXFORMAT_FLOAT2,.buffer_index = BUFFER_INDEX_VERTEX},
-//                 [ATTR_INDEX_INSTANCE_COLOR] = {.offset = offsetof(instance_t, color),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 // 4x4 matrices will span 4 attribute slots
-//                 [ATTR_INDEX_INSTANCE_POSE] = {.offset = offsetof(instance_t, pose),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_POSE+1] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_POSE+2] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_POSE+3] = {.offset = offsetof(instance_t, pose) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 // 4x4 matrices will span 4 attribute slots
-//                 [ATTR_INDEX_INSTANCE_NORMAL] = {.offset = offsetof(instance_t, normal),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_NORMAL+1] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 4),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_NORMAL+2] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 8),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE},
-//                 [ATTR_INDEX_INSTANCE_NORMAL+3] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE}
-//             }
-//         },
-//         .index_type = SG_INDEXTYPE_UINT16,
-//         .depth_stencil = {
-//             .depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL,
-//             .depth_write_enabled = true,
-//         },
-//         .blend = {
-//             .depth_format = SG_PIXELFORMAT_DEPTHSTENCIL,
-//         },
-//         .rasterizer = {
-//             .cull_mode = SG_CULLMODE_BACK,
-//             .sample_count = app.msaa_samples
-//         },
-//         .label = "phong-instancing-pipeline"
-//     });
-// }
-
-// void update_scene() {
-    
-//     // @todo: update scene params 
-// }
-
-// void render_scene() {
-//     const int w = sapp_width();
-//     const int h = sapp_height();
-
-//     mat4f_t proj = smat4_perspective_fov(
-//         scene.camera.fov, (float)w, (float)h,
-//         scene.camera.near_plane, scene.camera.far_plane);
-
-//     mat4f_t view = smat4_look_at(
-//         scene.camera.eye_pos, scene.camera.target,
-//         (vec3f_t){0.f, 1.f, 0.f});
-
-//     uniforms = (uniforms_t) {
-//         .view_proj = smat4_multiply(proj, view),
-//         .light = scene.light.plane,
-//         .eye_pos = scene.camera.eye_pos
-//     };
-
-//     // update instance model, and normal, matrices 
-//     instance_t instances[MAX_CUBE_INSTANCES] = {0};
-//     const model_t* cubes = &scene.models[cubes_group.id];
-//     for (size_t i = 0; i < MAX_CUBE_INSTANCES; ++i) {
-//         const instance_t* cube = &cubes->instances[i];
-//         instance_t *instance = &instances[i];
-//         instance->color = cube->color;
-//         instance->pose = smat4_multiply(scene.root, cube->pose);
-//         instance->normal = smat4_transpose(smat4_inverse(instance->pose));
-//     }
-    
-//     // @todo: update instance data of all render models
-    
-//     // upload instance data to render
-//     sg_update_buffer(
-//         render_pass.bindings.vertex_buffers[BUFFER_INDEX_INSTANCE],
-//         instances, MAX_CUBE_INSTANCES * sizeof(instance_t));
-
-//     // update render pass dynamics 
-//     sg_apply_viewport(0, 0, w, h, true);
-//     sg_apply_pipeline(render_pass.pipeline);
-//     sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms, sizeof(uniforms_t));
-
-//     // @todo: apply binding and draw elements for each render group
-//     sg_apply_bindings(&render_pass.bindings);
-
-//     // render the cubes group 
-//     sg_draw(0, cube_mesh.num_elements, MAX_CUBE_INSTANCES);
-// }

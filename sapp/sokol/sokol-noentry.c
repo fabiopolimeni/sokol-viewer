@@ -6,6 +6,7 @@
 #define SOKOL_LOG(s) OutputDebugStringA(s)
 #endif
 /* sokol 3D-API defines are provided by build options */
+#include "sokol_args.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_time.h"

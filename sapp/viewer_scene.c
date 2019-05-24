@@ -204,13 +204,7 @@ static void update_instances(const scene_t* scene, geometry_pass_t* pass) {
     for (int32_t l = 0; l < nodes_count; ++l) {
         node_link_t* link = &links[l];
     
-        mat4f_t local_pose = 
-            smat4_translate(smat4_multiply(
-                    smat4_rotation_quat(
-                        squat_normalize(link->transform.rotation)),
-                    smat4_scaling(
-                        smat4_identity(), link->transform.scale)
-                ), link->transform.position);
+        mat4f_t local_pose = transform_to_mat4(link->transform);
 
         // transform local pose into model space
         // by multiplying it by its parent pose

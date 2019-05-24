@@ -17,19 +17,8 @@ typedef struct handle_t node_id_t;
 typedef struct handle_t shape_id_t;
 
 typedef struct {
-    vec3f_t position;
-    vec3f_t scale;
-    quat_t rotation;
-} transform_t;
-
-typedef struct {
-    vec3f_t center;
-    vec3f_t extents;
-} bbox_t;
-
-typedef struct {
     transform_t bone;
-    bbox_t bbox;
+    box_t bbox;
     cluster_id_t cluster_id;
     uint16_t base_vertex_id;
     uint16_t num_vertices;

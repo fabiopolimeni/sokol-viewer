@@ -43,6 +43,15 @@ vec3f_t squat_to_euler(quat_t q) {
     return (vec3f_t){.x = roll, .y = pitch, .z = yaw};
 }
 
+mat4f_t transform_to_mat4(transform_t transform) {
+    return smat4_translate(smat4_multiply(
+        smat4_rotation_quat(
+            squat_normalize(transform.rotation)),
+        smat4_scaling(
+            smat4_identity(), transform.scale)
+    ), transform.position);
+}
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

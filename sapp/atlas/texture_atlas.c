@@ -48,6 +48,10 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TA_FREE free
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 typedef struct texture_s ta_texture_t;
 
 struct texture_s {
@@ -364,3 +368,8 @@ int ta_get_ntextures(void *att)
     const ta_atlas_t *at = att;
     return at->ntextures;
 }
+
+#if defined(__cplusplus)
+} // extern "C" {
+#endif
+

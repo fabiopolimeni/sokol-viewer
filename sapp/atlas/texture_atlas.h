@@ -1,5 +1,8 @@
-#ifndef TEXTURE_ATLAS_H
-#define TEXTURE_ATLAS_H
+#pragma once
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 typedef struct {
     int x, y;
@@ -46,4 +49,6 @@ int ta_get_ntextures(
     const void* att
 );
 
+#if defined(__cplusplus)
+// extern "C" {
 #endif

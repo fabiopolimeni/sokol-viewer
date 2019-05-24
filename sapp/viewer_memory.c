@@ -154,11 +154,11 @@ static void* _memory_realloc_aligned(void* ptr, size_t sz, size_t al)  {
 
 #endif // VIEWER_ALIGNED_MALLOC/REALLOC/FREE
 
-inline void * memory_aligned_malloc(size_t sz, size_t al) {
+void * memory_aligned_malloc(size_t sz, size_t al) {
     return VIEWER_ALIGNED_MALLOC(sz, al);
 }
 
-inline void * memory_aligned_calloc(size_t cnt, size_t sz, size_t al) {
+void * memory_aligned_calloc(size_t cnt, size_t sz, size_t al) {
     size_t size = cnt * sz;
     void* data = memory_aligned_malloc(size, al);
     if (data != NULL) {
@@ -168,22 +168,22 @@ inline void * memory_aligned_calloc(size_t cnt, size_t sz, size_t al) {
     return data;
 }
 
-inline void * memory_aligned_realloc(void* ptr, size_t sz, size_t al) {
+void * memory_aligned_realloc(void* ptr, size_t sz, size_t al) {
     return VIEWER_ALIGNED_REALLOC(ptr, sz, al);
 }
 
-inline void * memory_malloc(size_t sz) {
+void * memory_malloc(size_t sz) {
     return memory_aligned_malloc(sz, MEMORY_DEFAULT_ALIGNMENT);
 }
 
-inline void * memory_calloc(size_t cnt, size_t sz) {
+void * memory_calloc(size_t cnt, size_t sz) {
     return memory_aligned_calloc(cnt, sz, MEMORY_DEFAULT_ALIGNMENT);
 }
 
-inline void * memory_realloc(void* ptr, size_t sz) {
+void * memory_realloc(void* ptr, size_t sz) {
     return memory_aligned_realloc(ptr, sz, MEMORY_DEFAULT_ALIGNMENT);
 }
 
-inline void memory_free(void* ptr) {
+void memory_free(void* ptr) {
     VIEWER_ALIGNED_FREE(ptr);
 }

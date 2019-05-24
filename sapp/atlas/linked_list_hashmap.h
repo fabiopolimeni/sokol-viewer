@@ -1,5 +1,8 @@
-#ifndef LINKED_LIST_HASHMAP_H
-#define LINKED_LIST_HASHMAP_H
+#pragma once
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 typedef unsigned long (*func_longhash_f) (const void *);
 
@@ -153,4 +156,6 @@ void ll_hashmap_increase_capacity(
     ll_hashmap_t * hmap,
     unsigned int factor);
 
-#endif /* LINKED_LIST_HASHMAP_H */
+#if defined(__cplusplus)
+} // extern "C" {
+#endif

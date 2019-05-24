@@ -34,6 +34,10 @@
 
 #include "linked_list_hashmap.h"
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /* when we call for more capacity */
 #define SPACERATIO 0.5
 
@@ -461,4 +465,6 @@ void ll_hashmap_iterator(
     iter->cur_linked = NULL;
 }
 
-/*--------------------------------------------------------------79-characters-*/
+#if defined(__cplusplus)
+} // extern "C" {
+#endif

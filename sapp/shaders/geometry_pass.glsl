@@ -78,7 +78,7 @@ void main() {
       normalize(-light_dir.xyz),
       light_color.xyz,
       em_spec.zyx),
-    color_alpha.w);
+    color_alpha.w * color.w);
 }
 @end
 

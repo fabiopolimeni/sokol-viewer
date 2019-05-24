@@ -8,12 +8,17 @@ add_subdirectory(atlas)
 add_subdirectory(sokol)
 add_subdirectory(ui)
 add_subdirectory(tinyobjloader)
+add_subdirectory(cute)
+add_subdirectory(stb)
 
 #-------------------------------------------------------------------------------
 #   The viewer app with UI
 #
 fips_begin_app(viewer-sapp-ui windowed)
+if (FIPS_MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     fips_vs_warning_level(3)
+endif()
     fips_files_ex(. viewer*.c NO_RECURSE)
     sokol_shader(shaders/geometry_pass.glsl ${slang})
     fips_deps(sokol tinyobjloader mathc cimgui sgui)

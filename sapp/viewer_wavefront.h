@@ -4,6 +4,7 @@
   */
 
 #include "viewer_geometry_pass.h"
+#include "viewer_memory.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -17,19 +18,14 @@ typedef struct {
 } wavefront_mesh_t;
 
 typedef struct {
-    const void* obj_data;
-    int32_t data_size;
-} wavefront_data_t;
-
-typedef struct {
-    wavefront_mesh_t* meshes;
-    const vec4f_t* colors;
-    const char** tex_names;
-    const char** group_names;
-    int32_t num_groups;
-} wavefront_obj_t;
-
-wavefront_obj_t wavefront_load_obj(const wavefront_data_t* data);
+    box_t bbox;
+    rect_t image_tile;
+    uint16_t base_vertex_id;
+    uint16_t num_vertices;
+    uint16_t base_face_id;
+    uint16_t num_faces;
+    trace_t trace;
+} wavefront_shape_t;
 
 typedef struct {
     uint16_t width;
@@ -38,17 +34,45 @@ typedef struct {
 } wavefront_image_t;
 
 typedef struct {
+    memory_allocator_t ator;
     const wavefront_mesh_t* mesh;
     const wavefront_image_t* diffuseRGB_alphaA;
     const wavefront_image_t* emissiveXYZ_specularW;
     const wavefront_image_t* normalXY_dispZ_aoW;
-} wavefront_shape_t;
-
-typedef struct {
     const wavefront_shape_t* shapes;
     int32_t num_shapes;
-    const char* label;
+    trace_t trace;
 } wavefront_model_t;
+
+typedef enum {
+    WAVEFRONT_IMPORT_AS_IS              = 0x00,
+    WAVEFRONT_IMPORT_TRIANGULATE        = 0x01,
+    WAVEFRONT_IMPORT_CALC_NORMALS       = 0x02,
+    WAVEFRONT_IMPORT_IGNORE_TEXTURES    = 0x04,
+    WAVEFRONT_IMPORT_DEFAULT            = 
+       WAVEFRONT_IMPORT_TRIANGULATE
+} wavefront_import_options_t;
+
+typedef struct {
+    memory_allocator_t allocator;
+    const void* obj_data;
+    int32_t data_size;
+    int32_t atlas_width;
+    int32_t atlas_height;
+    uint8_t import_options;
+} wavefront_data_t;
+
+typedef enum {
+    WAVEFRONT_RESULT_OK,
+    WAVEFRONT_RESULT_ATLAS_OUT_OF_SIZE,
+    WAVEFRONT_RESULT_FACES_OUT_OF_RANGE,
+    WAVEFRONT_RESULT_MESH_MALFORMED
+} wavefront_result_t;
+
+wavefront_result_t wavefront_parse_obj(const wavefront_data_t* data,
+    wavefront_model_t* out);
+
+void wavefront_release_obj(wavefront_model_t* obj);
 
 // because each model can store only one texture per object,
 // if a multiple texture/material object is provided, then,
@@ -56,8 +80,6 @@ typedef struct {
 // and vertices' uvs need to be adjusted accordingly.
 model_id_t wavefront_make_model(geometry_pass_t* pass,
     const wavefront_model_t* model);
-
-void wavefront_release_obj(wavefront_obj_t* obj);
 
 #if defined(__cplusplus)
 }

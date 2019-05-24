@@ -7,17 +7,18 @@
 extern "C" {
 #endif
 
-wavefront_obj_t wavefront_load_obj(const wavefront_data_t* data) {
-    return (wavefront_obj_t){0};
+wavefront_result_t wavefront_parse_obj(const wavefront_data_t* data,
+    wavefront_model_t* out) {
+    return WAVEFRONT_RESULT_OK;
+}
+
+void wavefront_release_obj(wavefront_model_t* model) {
+
 }
 
 model_id_t wavefront_make_model(geometry_pass_t* pass,
     const wavefront_model_t* model) {
     return (model_id_t){.id=HANDLE_INVALID_ID};
-}
-
-void wavefront_release_obj(wavefront_obj_t* obj) {
-
 }
 
 #if defined(__cplusplus)
