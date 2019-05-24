@@ -43,7 +43,7 @@ layout(binding=0) uniform fs_params {
 
 layout(binding=0) uniform sampler2DArray albedo_transparency;
 layout(binding=1) uniform sampler2DArray emissive_specular;
-//layout(binding=3) uniform sampler2DArray normal_disp_ao;
+//layout(binding=2) uniform sampler2DArray normal_disp_ao;
 
 in vec3 world_position;
 in vec3 world_normal;

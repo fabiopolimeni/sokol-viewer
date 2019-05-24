@@ -20,6 +20,7 @@ extern "C" {
 typedef struct handle_t mesh_id_t;
 typedef struct handle_t material_id_t;
 typedef struct handle_t model_id_t;
+typedef struct handle_t cluster_id_t;
 
 // -----------------------------------------------------------------------------
 // Structures
@@ -39,6 +40,18 @@ typedef struct {
     sg_buffer ibuf;
     trace_t trace;
 } mesh_t;
+
+typedef struct {
+    // @note:
+    // this info may be part of the vertex properties
+    // although the information can be repeated for
+    // each vertex, while it is not needed butfor the
+    // cluster, it is also true, that never changes
+    // over time, therefore we don't need to compute
+    // them and transfer to texture data.
+    vec4f_t uv_tile;
+    vec4f_t uv_scale_pan;
+} cluster_t;
 
 typedef struct {
     sg_image albedo_transparency;  // rgb: albedo, a: transparency

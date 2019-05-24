@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 typedef struct handle_t node_id_t;
+typedef struct handle_t shape_id_t;
 
 typedef struct {
     vec3f_t position;
@@ -22,9 +23,32 @@ typedef struct {
 } transform_t;
 
 typedef struct {
+    vec3f_t center;
+    vec3f_t extents;
+} bbox_t;
+
+typedef struct {
+    transform_t bone;
+    bbox_t bbox;
+    cluster_id_t cluster_id;
+    uint16_t base_vertex_id;
+    uint16_t num_vertices;
+    uint16_t base_face_id;
+    uint16_t num_faces;
+    trace_t trace;
+} shape_t;
+
+typedef struct {
     transform_t transform;
+
+    // @note:
+    // texture tile information is already part of the cluster,
+    // while the color is deprecated, and both should be removed.
+    // as a replacement, the node should keep a list of shapes.
+    // e.g. shape_t shapes[SCENE_MAX_NODE_SHAPES]
     vec4f_t color;
     vec4f_t tile;
+    
     model_id_t model_id;
     node_id_t parent_id;
     trace_t trace;
