@@ -354,6 +354,7 @@ void cleanup(void) {
 
     sgui_shutdown();
     sg_shutdown();
+    sargs_shutdown();
 }
 
 void event(const sapp_event* ev) {
@@ -417,6 +418,17 @@ void fail(const char* msg) {
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    // Initialise arguments
+    sargs_setup(&(sargs_desc) {
+        .argc = argc,
+        .argv = argv
+    });
+
+    if (!sargs_isvalid()) {
+        LOG_ERROR("ERROR: Invalid command line\n");
+        exit(EXIT_FAILURE);
+    }
+
     return (sapp_desc) {
         .init_cb = init,
         .frame_cb = frame,

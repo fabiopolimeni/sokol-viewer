@@ -18,11 +18,11 @@ extern "C" {
 #endif
 
 typedef enum {
-    FILE_OPEN_READ      = 0x00, // open the file to be read
-    FILE_OPEN_WRITE     = 0x01, // open the file to be written
-    FILE_OPEN_EOF       = 0x02, // open the file from the end of it
-    FILE_OPEN_CREATE    = 0x04, // create the file if it doesn't exist
-    FILE_OPEN_BINARY    = 0x08 // open in binary mode 
+    FILE_OPEN_READ      = 0x01, // open the file to be read
+    FILE_OPEN_WRITE     = 0x02, // open the file to be written
+    FILE_OPEN_EOF       = 0x04, // open the file from the end of it
+    FILE_OPEN_CREATE    = 0x08, // create the file if it doesn't exist
+    FILE_OPEN_BINARY    = 0x10 // open in binary mode 
 } file_open_options_t;
 
 typedef struct {

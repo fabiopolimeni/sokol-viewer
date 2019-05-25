@@ -1,4 +1,6 @@
 #include "viewer_wavefront.h"
+#include "viewer_file.h"
+#include "viewer_memory.h"
 
 #include <assert.h>
 #include <string.h>

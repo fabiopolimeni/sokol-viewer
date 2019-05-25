@@ -38,7 +38,9 @@ file_t file_open(const char* filename, uint8_t options) {
         fclose(temp_fd);
     }
 
+    int32_t chid = 0;
     char opts[4] = {0};
+
     if (options & FILE_OPEN_READ) {
         if (options & FILE_OPEN_EOF) {
             opts[0] = 'a';
@@ -46,14 +48,17 @@ file_t file_open(const char* filename, uint8_t options) {
         else {
             opts[0] = 'r';
         }
+        
+        chid += 1;
     }
 
     if (options & FILE_OPEN_WRITE) {
-        opts[1] = '+';
+        opts[chid] = chid ? '+' : 'w';
+        chid += 1;
     }
 
     if (options & FILE_OPEN_BINARY) {
-        opts[2] = 'b';
+        opts[chid] = 'b';
     }
 
     return (file_t) {.fd = fopen(filename, opts)};
