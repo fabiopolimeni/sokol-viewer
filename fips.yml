@@ -21,3 +21,6 @@ imports:
     git: https://github.com/fabiopolimeni/fips-tinyobjloader-c.git
   fips-cute_headers:
     git: https://github.com/fabiopolimeni/fips-cute_headers.git
+run:
+  viewer-sapp-ui:
+    cwd: sapp/assets

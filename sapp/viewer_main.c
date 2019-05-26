@@ -241,14 +241,18 @@ model_id_t load_wavefront_model(const char* filename) {
     if (!file_is_valid(file_model)) {
         return (model_id_t){.id=HANDLE_INVALID_ID};
     }
+    
+    model_id_t result_model_id = {.id=HANDLE_INVALID_ID};
 
     char* buffer_data = NULL;
     size_t buffer_size = 0;
+
+    // load file content into a memory buffer
     if (FILE_READALL_OK == file_readall(
         file_model, &buffer_data, &buffer_size, memory_realloc)) {
         assert(buffer_size < INT32_MAX);
-        file_close(file_model);
 
+        // load wavefront model from memory buffer
         wavefront_model_t* wf_model = {0};
         wavefront_result_t wf_result = wavefront_parse_obj(&(wavefront_data_t){
             .allocator = memory_realloc,
@@ -259,16 +263,18 @@ model_id_t load_wavefront_model(const char* filename) {
             .import_options = WAVEFRONT_IMPORT_DEFAULT
         }, wf_model);
 
+        // accommodate for render model resources
         if (WAVEFRONT_RESULT_OK == wf_result) {
-            model_id_t model_id = wavefront_make_model(
+            result_model_id = wavefront_make_model(
                 &geometry_pass, wf_model);
             wavefront_release_obj(wf_model);
-            return model_id;
         }
     }
 
+    // release data read from file
+    memory_realloc(buffer_data, 0);
     file_close(file_model);
-    return (model_id_t){.id=HANDLE_INVALID_ID};
+    return result_model_id;
 }
 
 node_id_t add_wavefront_to_scene(model_id_t model_id) {
@@ -396,7 +402,7 @@ void event(const sapp_event* ev) {
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
         wf_model_id = load_wavefront_model(
             sargs_value_def("wf",
-                "assets/models/cyberpunk_bar/cyberpunk_bar.obj"));
+                "models/cyberpunk_bar/cyberpunk_bar.obj"));
     }
 
     // add the wavefront model to the scene (Ctrl+W)
@@ -418,7 +424,7 @@ void fail(const char* msg) {
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    // Initialise arguments
+    // initialise arguments
     sargs_setup(&(sargs_desc) {
         .argc = argc,
         .argv = argv
