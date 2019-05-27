@@ -133,7 +133,7 @@ typedef struct {
 material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     const material_desc_t* material_desc);
 
-material_id_t geometry_pass_make_material_default(geometry_pass_t* pass);
+material_id_t geometry_pass_get_default_material(geometry_pass_t* pass);
 
 void geometry_pass_destroy_material(geometry_pass_t* pass, material_id_t mat);
 

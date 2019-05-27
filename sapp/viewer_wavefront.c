@@ -229,14 +229,15 @@ model_id_t wavefront_make_model(geometry_pass_t* pass,
     assert(pass && model);
 
     return geometry_pass_create_model(pass, &(model_desc_t){
-        .material = geometry_pass_make_material_default(pass),
+        .material = geometry_pass_get_default_material(pass),
         .mesh = geometry_pass_make_mesh(pass, &(mesh_desc_t){
             .vertices = model->mesh->vertices,
             .num_vertices = model->mesh->num_vertices,
             .indices = model->mesh->indices,
             .num_indices = model->mesh->num_indices,
             .label = model->trace.name
-        })
+        }),
+        .label = model->trace.name
     });
 }
 

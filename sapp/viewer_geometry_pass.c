@@ -260,9 +260,8 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     return mat_id;
 }
 
-material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
+material_id_t __geometry_pass_make_material_default(geometry_pass_t* pass) {
     assert(pass);
-
     static uint32_t color_alpha[4*4*4] = {
         // checkboard
         0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
@@ -308,6 +307,15 @@ material_id_t geometry_pass_make_material_default(geometry_pass_t* pass) {
         },
         .label = "default-material"
     });
+}
+
+material_id_t geometry_pass_get_default_material(geometry_pass_t* pass) {
+    assert(pass);
+
+    // if the following fails, check the
+    // geometry pass has been initialised
+    assert(!material_is_empty(&pass->materials[0]));
+    return(material_id_t){.id = 0};
 }
 
 void geometry_pass_destroy_material(geometry_pass_t* pass, material_id_t mat) {
@@ -536,6 +544,8 @@ void geometry_pass_init(geometry_pass_t* pass) {
 
     // setup the render pass
     renderer_pass_setup(pass, &pass->render);
+    material_id_t default_mat_id = __geometry_pass_make_material_default(pass);
+    assert(default_mat_id.id == 0);
 }
 
 void geometry_pass_cleanup(geometry_pass_t* pass) {

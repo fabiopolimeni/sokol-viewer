@@ -80,7 +80,7 @@ static vec3f_t ambient_color = {0.4f, 0.6f, 0.7f};
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
 
-    default_mat_id = geometry_pass_make_material_default(&geometry_pass);
+    default_mat_id = geometry_pass_get_default_material(&geometry_pass);
     
     box_mesh_id = geometry_pass_make_mesh_box(&geometry_pass,
         &(mesh_box_desc_t){
@@ -406,10 +406,10 @@ void event(const sapp_event* ev) {
 
     // load the wavefront model (W)
     if ((ev->key_code == SAPP_KEYCODE_W)
-        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
-        wf_model_id = load_wavefront_model(
-            sargs_value_def("wf",
-                "models/cyberpunk_bar/cyberpunk_bar.obj"));
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
+        && !handle_is_valid(wf_model_id, GEOMETRY_PASS_MAX_MODELS)) {
+        wf_model_id = load_wavefront_model(sargs_value_def("wf",
+            "models/cyberpunk_bar/cyberpunk_bar.obj"));
     }
 
     // add the wavefront model to the scene (Ctrl+W)
