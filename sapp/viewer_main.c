@@ -31,13 +31,22 @@ typedef struct {
     uint8_t show_ui: 1;
     uint8_t render_scene: 1;
     uint8_t msaa_samples: 4;
+    
+    float mouse_x;
+    float mouse_y;
+    float mouse_speed;
+    bool mouse_button_pressed[3];
 } app_t;
 
 static app_t app = {
     .show_menu = true,
     .show_ui = true,
     .render_scene = true,
-    .msaa_samples = MSAA_SAMPLES
+    .msaa_samples = MSAA_SAMPLES,
+    .mouse_x = 0.f,
+    .mouse_y = 0.f,
+    .mouse_speed = 0.01f,
+    .mouse_button_pressed = {0}
 };
 
 // create a checkerboard texture 
@@ -127,6 +136,16 @@ static void update_scene() {
 
 static void draw_scene() {
     render_pass_draw(&geometry_pass.render);
+}
+
+static void clear_scene() {
+    scene_cleanup(&scene);
+    memset(&scene, 0, sizeof(scene));
+}
+
+static void clear_render() {
+    geometry_pass_cleanup(&geometry_pass);
+    memset(&geometry_pass, 0, sizeof(geometry_pass));
 }
 
 // return the index at which the node has
@@ -362,12 +381,38 @@ void frame(void) {
 }
 
 void cleanup(void) {
-    geometry_pass_cleanup(&geometry_pass);
-    scene_cleanup(&scene);
+    clear_scene();
+    clear_render();
 
     sgui_shutdown();
     sg_shutdown();
     sargs_shutdown();
+}
+
+static void move_camera_event(const sapp_event* ev) {
+    if (ev->type == SAPP_EVENTTYPE_MOUSE_DOWN
+        && (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE)) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = true;
+    }
+
+    if (ev->type == SAPP_EVENTTYPE_MOUSE_UP
+        && (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE)) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = false;
+    }
+    
+    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE]) {
+        float disp_x = (app.mouse_x - ev->mouse_x) * app.mouse_speed;
+        float disp_y = (ev->mouse_y - app.mouse_y) * app.mouse_speed;
+
+        scene.camera.eye_pos.x += disp_x;
+        scene.camera.eye_pos.y += disp_y;
+        
+        scene.camera.target.x += disp_x;
+        scene.camera.target.y += disp_y;
+    }
+
+    app.mouse_x = ev->mouse_x;
+    app.mouse_y = ev->mouse_y;
 }
 
 void event(const sapp_event* ev) {
@@ -381,6 +426,15 @@ void event(const sapp_event* ev) {
     // toggle menu visibility (Alt)
     if (ev->modifiers & SAPP_MODIFIER_ALT) {
         app.show_menu = !app.show_menu;
+    }
+
+    // reset scene
+    if ((ev->key_code == SAPP_KEYCODE_R)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
+        clear_scene();
+        clear_render();
+        setup_render();
+        setup_scene();
     }
 
     // toggle UI visibility (Ctrl+G)
@@ -422,6 +476,7 @@ void event(const sapp_event* ev) {
         }
     }
 
+    move_camera_event(ev);
     sgui_event(ev);
 }
 

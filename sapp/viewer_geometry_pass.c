@@ -260,7 +260,7 @@ material_id_t geometry_pass_make_material(geometry_pass_t* pass,
     return mat_id;
 }
 
-material_id_t __geometry_pass_make_material_default(geometry_pass_t* pass) {
+static material_id_t __geometry_pass_make_material_default(geometry_pass_t* pass) {
     assert(pass);
     static uint32_t color_alpha[4*4*4] = {
         // checkboard
