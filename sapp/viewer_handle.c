@@ -32,6 +32,11 @@ void trace_printf(trace_t* dst, const char* fmt, ...) {
     }
 }
 
+void trace_copy(trace_t* dst, const trace_t* src) {
+    assert(dst && src);
+    memcpy(dst->name, src->name, TRACE_MAX_NAME_CHARS);
+}
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

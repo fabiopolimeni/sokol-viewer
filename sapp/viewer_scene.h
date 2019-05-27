@@ -20,10 +20,10 @@ typedef struct {
     transform_t bone;
     box_t bbox;
     cluster_id_t cluster_id;
-    uint16_t base_vertex_id;
-    uint16_t num_vertices;
-    uint16_t base_face_id;
-    uint16_t num_faces;
+    uint32_t base_vertex_id;
+    uint32_t num_vertices;
+    uint32_t base_face_id;
+    uint32_t num_faces;
     trace_t trace;
 } shape_t;
 

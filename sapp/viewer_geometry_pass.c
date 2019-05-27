@@ -70,7 +70,7 @@ mesh_id_t geometry_pass_make_mesh(geometry_pass_t* pass,
         return mesh_id;
     }
 
-    uint16_t indices_array_size = sizeof(uint16_t) * mesh_desc->num_indices;
+    uint32_t indices_array_size = sizeof(uint32_t) * mesh_desc->num_indices;
     
     // create temporary buffer traces labels
     trace_t vb_trace;
@@ -93,7 +93,7 @@ mesh_id_t geometry_pass_make_mesh(geometry_pass_t* pass,
             .label = ib_trace.name
         }),
 
-        .num_elements = indices_array_size / sizeof(uint16_t)
+        .num_elements = indices_array_size / sizeof(uint32_t)
     };
 
     trace_printf(&mesh.trace, "%s", mesh_desc->label);
@@ -143,7 +143,7 @@ mesh_id_t geometry_pass_make_mesh_box(geometry_pass_t* pass,
         { {  hw,  hh, -hl }, { 0.0,  1.0, 0.0 }, { 0.0f, 1.0f } }
     };
     
-    uint16_t indices[] = {
+    uint32_t indices[] = {
         0, 1, 2,  0, 2, 3,
         6, 5, 4,  7, 6, 4,
         8, 9, 10,  8, 10, 11,
@@ -493,7 +493,7 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
                 [ATTR_geo_vs_instance_normal+3] = {.offset = offsetof(instance_t, normal) + (sizeof(mfloat_t) * 12),.format = SG_VERTEXFORMAT_FLOAT4,.buffer_index = BUFFER_INDEX_INSTANCE}
             }
         },
-        .index_type = SG_INDEXTYPE_UINT16,
+        .index_type = SG_INDEXTYPE_UINT32,
         .depth_stencil = {
             .depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL,
             .depth_write_enabled = true,

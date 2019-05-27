@@ -55,6 +55,6 @@ macro(sokol_config)
     endif()
 endmacro()
 
-add_subdirectory(sapp)
+fips_add_subdirectory(sapp)
 
 fips_finish()

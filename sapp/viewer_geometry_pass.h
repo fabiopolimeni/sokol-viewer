@@ -35,7 +35,7 @@ typedef struct {
 
  // a mesh consists of a vertex- and index-buffer  
 typedef struct {
-    uint16_t num_elements;
+    uint32_t num_elements;
     sg_buffer vbuf;
     sg_buffer ibuf;
     trace_t trace;
@@ -93,9 +93,9 @@ typedef struct {
 
 typedef struct {
     const vertex_t* vertices;
-    int32_t num_vertices;
-    const uint16_t* indices;
-    uint16_t num_indices;
+    uint32_t num_vertices;
+    const uint32_t* indices;
+    uint32_t num_indices;
     const char* label;
 } mesh_desc_t;
 

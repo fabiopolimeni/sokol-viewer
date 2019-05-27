@@ -9,6 +9,8 @@
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 
+#include "cute_path.h"
+
 #include "ui/sgui.h"
 #include "ui/sgui_gfx.h"
 
@@ -252,22 +254,27 @@ model_id_t load_wavefront_model(const char* filename) {
         file_model, &buffer_data, &buffer_size, memory_realloc)) {
         assert(buffer_size < INT32_MAX);
 
+        trace_t wf_name;
+        path_pop(filename, NULL, wf_name.name);
+        path_pop_ext(wf_name.name, wf_name.name, NULL);
+
         // load wavefront model from memory buffer
-        wavefront_model_t* wf_model = {0};
+        wavefront_model_t wf_model = {0};
         wavefront_result_t wf_result = wavefront_parse_obj(&(wavefront_data_t){
             .allocator = memory_realloc,
             .obj_data = buffer_data,
             .data_size = (int32_t)buffer_size,
             .atlas_width = 1024,
             .atlas_height = 1024,
-            .import_options = WAVEFRONT_IMPORT_DEFAULT
-        }, wf_model);
+            .import_options = WAVEFRONT_IMPORT_DEFAULT,
+            .label = wf_name.name
+        }, &wf_model);
 
         // accommodate for render model resources
         if (WAVEFRONT_RESULT_OK == wf_result) {
             result_model_id = wavefront_make_model(
-                &geometry_pass, wf_model);
-            wavefront_release_obj(wf_model);
+                &geometry_pass, &wf_model);
+            wavefront_release_obj(&wf_model);
         }
     }
 
@@ -284,7 +291,7 @@ node_id_t add_wavefront_to_scene(model_id_t model_id) {
             .scale = svec3_one(),
             .rotation = squat_null()
         },
-        .color = svec4_one(),
+        .color = svec4(0.6f, 0.6f, 0.6f, 1.0f),
         .tile = (vec4f_t){
             .x = 1.0f,  // scaling u
             .y = 1.0f,  // scaling v

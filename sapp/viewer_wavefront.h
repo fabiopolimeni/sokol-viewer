@@ -13,17 +13,17 @@ extern "C" {
 typedef struct {
     vertex_t* vertices;
     int32_t num_vertices;
-    uint16_t* indices;
-    uint16_t num_indices;
+    uint32_t* indices;
+    uint32_t num_indices;
 } wavefront_mesh_t;
 
 typedef struct {
     box_t bbox;
     rect_t image_tile;
-    uint16_t base_vertex_id;
-    uint16_t num_vertices;
-    uint16_t base_face_id;
-    uint16_t num_faces;
+    uint32_t base_vertex_id;
+    uint32_t num_vertices;
+    uint32_t base_face_id;
+    uint32_t num_faces;
     trace_t trace;
 } wavefront_shape_t;
 
@@ -34,12 +34,12 @@ typedef struct {
 } wavefront_image_t;
 
 typedef struct {
-    memory_allocator_t ator;
-    const wavefront_mesh_t* mesh;
-    const wavefront_image_t* diffuseRGB_alphaA;
-    const wavefront_image_t* emissiveXYZ_specularW;
-    const wavefront_image_t* normalXY_dispZ_aoW;
-    const wavefront_shape_t* shapes;
+    memory_allocator_t allocator;
+    wavefront_mesh_t* mesh;
+    wavefront_image_t* diffuseRGB_alphaA;
+    wavefront_image_t* emissiveXYZ_specularW;
+    wavefront_image_t* normalXY_dispZ_aoW;
+    wavefront_shape_t* shapes;
     int32_t num_shapes;
     trace_t trace;
 } wavefront_model_t;
@@ -60,13 +60,15 @@ typedef struct {
     int32_t atlas_width;
     int32_t atlas_height;
     uint8_t import_options;
+    const char* label;
 } wavefront_data_t;
 
 typedef enum {
     WAVEFRONT_RESULT_OK,
     WAVEFRONT_RESULT_ATLAS_OUT_OF_SIZE,
     WAVEFRONT_RESULT_FACES_OUT_OF_RANGE,
-    WAVEFRONT_RESULT_MESH_MALFORMED
+    WAVEFRONT_RESULT_MESH_MALFORMED,
+    WAVEFRONT_RESULT_INVALID_OBJECT
 } wavefront_result_t;
 
 wavefront_result_t wavefront_parse_obj(const wavefront_data_t* data,

@@ -4,12 +4,12 @@ sokol_config()
 
 add_definitions(-DSOKOL_NO_DEPRECATED)
 
-add_subdirectory(atlas)
-add_subdirectory(sokol)
-add_subdirectory(ui)
-add_subdirectory(tinyobjloader)
-add_subdirectory(cute)
-add_subdirectory(stb)
+fips_add_subdirectory(atlas)
+fips_add_subdirectory(sokol)
+fips_add_subdirectory(ui)
+fips_add_subdirectory(tinyobjloader)
+fips_add_subdirectory(cute)
+fips_add_subdirectory(stb)
 
 #-------------------------------------------------------------------------------
 #   The viewer app with UI
@@ -21,5 +21,5 @@ if (FIPS_MSVC)
 endif()
     fips_files_ex(. viewer*.c NO_RECURSE)
     sokol_shader(shaders/geometry_pass.glsl ${slang})
-    fips_deps(sokol tinyobjloader mathc cimgui sgui)
+    fips_deps(sokol tinyobjloader mathc cimgui sgui stb cute)
 fips_end_app()

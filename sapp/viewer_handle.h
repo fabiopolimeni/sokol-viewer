@@ -24,6 +24,7 @@ typedef struct {
 } trace_t;
 
 void trace_printf(trace_t* dst, const char* fmt, ...);
+void trace_copy(trace_t* dst, const trace_t* src);
 
 #if defined(__cplusplus)
 }
