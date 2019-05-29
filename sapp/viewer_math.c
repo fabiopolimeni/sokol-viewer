@@ -6,6 +6,14 @@
 extern "C" {
 #endif
 
+vec3f_t squat_axis(quat_t rotation) {
+    return svec3_normalize(svec3(
+        rotation.x,
+        rotation.y,
+        rotation.z
+    ));
+}
+
 //https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 quat_t squat_from_euler(vec3f_t euler) {
     mfloat_t cy = MCOS(euler.z * 0.5f);
@@ -43,6 +51,35 @@ vec3f_t squat_to_euler(quat_t q) {
     return (vec3f_t){.x = roll, .y = pitch, .z = yaw};
 }
 
+// https://gamedev.stackexchange.com/questions/28395/rotating-vector3-by-a-quaternion
+vec3f_t __squat_rotate_vec3(quat_t r, vec3f_t v) {
+    vec3f_t u = svec3(r.x, r.y, r.z);
+    mfloat_t s = r.w;
+
+    vec3f_t a = svec3_multiply_f(u, 2.0f * svec3_dot(u, v));
+    vec3f_t b = svec3_multiply_f(v, s * s - svec3_dot(u, u));
+    vec3f_t c = svec3_multiply_f(svec3_cross(u, v), 2.0f * s);
+
+    return svec3_add(svec3_add(a, b), c);
+}
+
+// alternative from GLM implementation
+// https://github.com/g-truc/glm/blob/fce2abd01ce21063bd25ba67c9318be83bf48813/glm/detail/type_quat.inl#L314
+vec3f_t squat_rotate_vec3(quat_t r, vec3f_t v) {
+    vec3f_t u = svec3(r.x, r.y, r.z);
+    vec3f_t uv = svec3_cross(u, v);
+    vec3f_t uuv = svec3_cross(u, uv);
+
+    // v + ((cross(u, v) * s) + cross(u, cross(u, v)) * 2.0f
+    return svec3_add(v,
+        svec3_multiply_f(
+            svec3_add(
+                svec3_multiply_f(uv, r.w),
+                uuv),
+            2.0f)
+        );
+}
+
 mat4f_t transform_to_mat4(transform_t transform) {
     return smat4_translate(smat4_multiply(
         smat4_rotation_quat(
@@ -50,6 +87,14 @@ mat4f_t transform_to_mat4(transform_t transform) {
         smat4_scaling(
             smat4_identity(), transform.scale)
     ), transform.position);
+}
+
+vec3f_t plane_project_point(plane_t plane, vec3f_t point) {
+    // p' = p - n * (n.p + d)
+    return svec3_subtract(point, svec3_multiply_f(
+        plane.normal, svec3_dot(
+            plane.normal, point) + plane.distance)
+    );
 }
 
 #if defined(__cplusplus)

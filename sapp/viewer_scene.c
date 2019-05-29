@@ -35,6 +35,7 @@ void scene_init(scene_t* scene) {
     scene->camera = (camera_t){
         .target = (vec3f_t){0.f,0.f,0.f},
         .eye_pos = (vec3f_t){0.f,0.f,10.f},
+        .up_vec = (vec3f_t){0.f,1.f,0.f},
         .fov = 45.f,
         .near_plane = 0.0f,
         .far_plane = 100.0f
@@ -263,8 +264,9 @@ void scene_update_geometry_pass(const scene_t* scene, geometry_pass_t* pass) {
     }
 
     mat4f_t view = smat4_look_at(
-        scene->camera.eye_pos, scene->camera.target,
-        (vec3f_t){0.f, 1.f, 0.f});
+        scene->camera.eye_pos,
+        scene->camera.target,
+        scene->camera.up_vec);
 
     pass->globals = (globals_t){
         .view_proj = smat4_multiply(proj, view),

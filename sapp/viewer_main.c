@@ -31,9 +31,10 @@ typedef struct {
     uint8_t show_ui: 1;
     uint8_t render_scene: 1;
     uint8_t msaa_samples: 4;
-    
-    float mouse_x;
-    float mouse_y;
+
+    vec2f_t mouse_pos;
+    vec2f_t mouse_orbit_pos;
+    vec2f_t mouse_panning_pos;
     float mouse_speed;
     bool mouse_button_pressed[3];
 } app_t;
@@ -43,8 +44,9 @@ static app_t app = {
     .show_ui = true,
     .render_scene = true,
     .msaa_samples = MSAA_SAMPLES,
-    .mouse_x = 0.f,
-    .mouse_y = 0.f,
+    .mouse_pos = {0.f,0.f},
+    .mouse_orbit_pos = {0.f,0.f},
+    .mouse_panning_pos = {0.f,0.f},
     .mouse_speed = 0.01f,
     .mouse_button_pressed = {0}
 };
@@ -70,7 +72,6 @@ static inline float rnd(float min_val, float max_val) {
         * (max_val - min_val)) + min_val;
 }
 
-static render_pass_t render_pass = {0};
 static geometry_pass_t geometry_pass = {0};
 static scene_t scene = {0};
 
@@ -105,29 +106,41 @@ static void setup_render() {
             .material = default_mat_id,
             .label = "box-group"
         });
+
+    wf_model_id = (model_id_t) {HANDLE_INVALID_ID};
 }
 
-static void setup_scene() {
-    scene_init(&scene);
-
+static void setup_camera() {
     scene.camera = (camera_t){
-        .target = (vec3f_t){0.f, 0.f, 0.f},
-        .eye_pos = (vec3f_t){0.f, 0.f, 10.f},
+        .target = (vec3f_t){0.f, 5.f, 0.f},
+        .eye_pos = (vec3f_t){10.f, 2.f, 10.f},
+        .up_vec = (vec3f_t){0.f,1.f,0.f},
         .fov = 45.0f,
         .near_plane = 0.0f,
         .far_plane = 100.0f,
         .width = (float)sapp_width(),
         .height = (float)sapp_height()
     };
+}
 
+static void setup_lights() {
     scene.light = (light_t){
         .plane = (vec4f_t){-1.f, -1.f, -.4f, 0.f},
         .color = ambient_color,
         .intensity = 16.f
     };
-        
+}
+
+static void setup_scene() {
+    scene_init(&scene);
+
+    setup_camera();
+    setup_lights();
+    
     scene.root = smat4_identity();
+    
     memset(box_node_ids, HANDLE_INVALID_ID, sizeof(box_node_ids));
+    wf_node_id = (model_id_t) {HANDLE_INVALID_ID};
 }
 
 static void update_scene() {
@@ -146,6 +159,13 @@ static void clear_scene() {
 static void clear_render() {
     geometry_pass_cleanup(&geometry_pass);
     memset(&geometry_pass, 0, sizeof(geometry_pass));
+}
+
+static void reset_app() {
+    clear_scene();
+    clear_render();
+    setup_render();
+    setup_scene();
 }
 
 // return the index at which the node has
@@ -196,12 +216,6 @@ static int32_t create_box(int32_t parent_id) {
                 .z = rnd(0.2f, 1.0f),   // b
                 .w = (float)(int)rnd(0.5f, 3.5f)    // uv's layer
             },
-            // .color = (vec4f_t){
-            //     .x = 1.0f,   // r
-            //     .y = 1.0f,   // g
-            //     .z = 1.0f,   // b
-            //     .w = 0.0f    // uv's layer
-            // },
             .tile = (vec4f_t){
                 .x = rnd(2.5f, 0.5f),  // scaling u
                 .y = rnd(2.5f, 0.5f),  // scaling v
@@ -390,29 +404,117 @@ void cleanup(void) {
 }
 
 static void move_camera_event(const sapp_event* ev) {
-    if (ev->type == SAPP_EVENTTYPE_MOUSE_DOWN
-        && (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE)) {
-        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = true;
-    }
-
-    if (ev->type == SAPP_EVENTTYPE_MOUSE_UP
-        && (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE)) {
-        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = false;
+    bool pressed = ev->type == SAPP_EVENTTYPE_MOUSE_DOWN;
+    
+    if (ev->mouse_button == SAPP_MOUSEBUTTON_LEFT) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT] = pressed;
+        app.mouse_panning_pos = svec2(ev->mouse_x, ev->mouse_y);
     }
     
-    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE]) {
-        float disp_x = (app.mouse_x - ev->mouse_x) * app.mouse_speed;
-        float disp_y = (ev->mouse_y - app.mouse_y) * app.mouse_speed;
-
-        scene.camera.eye_pos.x += disp_x;
-        scene.camera.eye_pos.y += disp_y;
-        
-        scene.camera.target.x += disp_x;
-        scene.camera.target.y += disp_y;
+    if (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = pressed;
+    }
+    
+    if (ev->mouse_button == SAPP_MOUSEBUTTON_RIGHT) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = pressed;
+        app.mouse_orbit_pos = svec2(ev->mouse_x, ev->mouse_y);
     }
 
-    app.mouse_x = ev->mouse_x;
-    app.mouse_y = ev->mouse_y;
+    // eye-target vector
+    vec3f_t eye_target_vec = svec3_subtract(
+        scene.camera.eye_pos, scene.camera.target);
+
+    mfloat_t eye_target_len = svec3_length(eye_target_vec);
+    assert(eye_target_len > MFLT_EPSILON);
+    vec3f_t eye_target_norm = svec3_multiply_f(
+        eye_target_vec, 1.f / eye_target_len);
+
+    vec3f_t eye_target_xz = svec3(
+        eye_target_vec.x, 0.0f, eye_target_vec.z);
+
+    // orbiting
+    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT]) {
+    
+        float disp_x = (app.mouse_orbit_pos.x - ev->mouse_x) * app.mouse_speed;
+        float disp_y = (ev->mouse_y - app.mouse_orbit_pos.y) * app.mouse_speed;
+
+        // compute the rotational vector
+        // around the horizontal axis.
+        vec3f_t eye_target_rot = squat_rotate_vec3(
+            squat_from_axis_angle(
+                scene.camera.up_vec, disp_x),
+            eye_target_xz
+        );
+        
+        // incorporate the vertical displacement,
+        // it will automatically limit the angle
+        // between -90 and 90 degrees.
+        eye_target_rot.y = eye_target_vec.y + disp_y * MPI;
+
+        // project the rotated eye-target vector onto
+        // the imaginary sphere centered at zero and
+        // of radius equal to the eye-target length.
+        // normal(rotated eye position) * eye_target_len
+        vec3f_t eye_target_proj = svec3_multiply_f(
+            svec3_normalize(eye_target_rot),
+            eye_target_len);
+
+        // quat_t zenith_rot = squat_from_vec3(
+        //     svec3_normalize(eye_target_xz),
+        //     eye_target_norm
+        // );
+
+        // vec3f_t eye_target_proj = squat_rotate_vec3(
+        //     squat_from_axis_angle(
+        //         squat_axis(zenith_rot), disp_y),
+        //     eye_target_rot
+        // );
+
+        scene.camera.eye_pos = svec3_add(
+            scene.camera.target,
+            eye_target_proj
+        );
+
+        // update orbiting mouse position
+        app.mouse_orbit_pos = svec2(ev->mouse_x, ev->mouse_y);
+    }
+
+    // panning
+    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT]) {
+        float disp_x = (app.mouse_panning_pos.x - ev->mouse_x) *
+            app.mouse_speed;
+        
+        float disp_y = (ev->mouse_y - app.mouse_panning_pos.y) *
+            app.mouse_speed;
+
+        // move the position and target on the
+        // Y along the up vector of the camera
+        quat_t zenith_rot = squat_from_vec3(
+            svec3_normalize(eye_target_xz),
+            eye_target_norm
+        );
+
+        // rotated up camera vector
+        vec3f_t up_vec = svec3_normalize(
+            squat_rotate_vec3(
+                zenith_rot,
+                svec3_normalize(scene.camera.up_vec)
+            ));
+
+        // the cross product of 2 unit vectors is itself a unit vector
+        vec3f_t right_vec = svec3_cross(eye_target_norm, up_vec);
+
+        vec3f_t disp_x_vec = svec3_multiply_f(right_vec, -disp_x);
+        vec3f_t disp_y_vec = svec3_multiply_f(up_vec, disp_y);
+        vec3f_t disp_vec = svec3_add(disp_x_vec, disp_y_vec);
+
+        scene.camera.eye_pos = svec3_add(scene.camera.eye_pos, disp_vec);
+        scene.camera.target = svec3_add(scene.camera.target, disp_vec);;
+        
+        app.mouse_panning_pos = svec2(ev->mouse_x, ev->mouse_y);
+    }
+
+    app.mouse_pos = svec2(ev->mouse_x, ev->mouse_y);
 }
 
 void event(const sapp_event* ev) {
@@ -428,13 +530,16 @@ void event(const sapp_event* ev) {
         app.show_menu = !app.show_menu;
     }
 
-    // reset scene
+    // reset scene (R)
     if ((ev->key_code == SAPP_KEYCODE_R)
         && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
-        clear_scene();
-        clear_render();
-        setup_render();
-        setup_scene();
+        reset_app();
+    }
+
+    // reset camera (C)
+    if ((ev->key_code == SAPP_KEYCODE_C)
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
+        setup_camera();
     }
 
     // toggle UI visibility (Ctrl+G)
@@ -451,25 +556,23 @@ void event(const sapp_event* ev) {
         app.render_scene = !app.render_scene;
     }
 
-    // create a new box node (Ctrl+B)
+    // create a new box node (B)
     if ((ev->key_code == SAPP_KEYCODE_B)
-        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
-        && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
         create_box(HANDLE_INVALID_ID);
     }
 
-    // load the wavefront model (W)
+    // add the wavefront model to the scene (W)
     if ((ev->key_code == SAPP_KEYCODE_W)
-        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
-        && !handle_is_valid(wf_model_id, GEOMETRY_PASS_MAX_MODELS)) {
-        wf_model_id = load_wavefront_model(sargs_value_def("wf",
-            "models/cyberpunk_bar/cyberpunk_bar.obj"));
-    }
+        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)) {
 
-    // add the wavefront model to the scene (Ctrl+W)
-    if ((ev->key_code == SAPP_KEYCODE_W)
-        && (ev->type == SAPP_EVENTTYPE_KEY_DOWN)
-        && (ev->modifiers & SAPP_MODIFIER_CTRL)) {
+        // create model render resource
+        if (!handle_is_valid(wf_model_id, GEOMETRY_PASS_MAX_MODELS)) {
+            wf_model_id = load_wavefront_model(sargs_value_def("wf",
+                "models/cyberpunk_bar/cyberpunk_bar.obj"));
+        }
+
+        // add the model to the scene
         if (handle_is_valid(wf_model_id, GEOMETRY_PASS_MAX_MODELS)
             && !handle_is_valid(wf_node_id, SCENE_MAX_NODES)) {
             wf_node_id = add_wavefront_to_scene(wf_model_id);

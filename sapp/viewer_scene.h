@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     vec3f_t target;
     vec3f_t eye_pos;
+    vec3f_t up_vec;
     mfloat_t fov;   // if < 0 => ortho projection
     mfloat_t width;
     mfloat_t height;
