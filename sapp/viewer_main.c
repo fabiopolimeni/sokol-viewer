@@ -35,6 +35,7 @@ typedef struct {
     vec2f_t mouse_pos;
     vec2f_t mouse_orbit_pos;
     vec2f_t mouse_panning_pos;
+    vec2f_t mouse_scroll;
     float mouse_speed;
     bool mouse_button_pressed[3];
 } app_t;
@@ -403,115 +404,132 @@ void cleanup(void) {
     sargs_shutdown();
 }
 
-static void move_camera_event(const sapp_event* ev) {
-    bool pressed = ev->type == SAPP_EVENTTYPE_MOUSE_DOWN;
+static void orbit_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
+    float disp_x = (app.mouse_orbit_pos.x - mouse_pos.x) * app.mouse_speed;
+    float disp_y = (mouse_pos.y - app.mouse_orbit_pos.y) * app.mouse_speed;
+
+    mfloat_t eye_target_len = svec3_length(eye_target_vec);
+    vec3f_t eye_target_xz = svec3(eye_target_vec.x, 0.0f, eye_target_vec.z);
+
+    // compute the rotational vector
+    // around the horizontal axis.
+    vec3f_t eye_target_rot = squat_rotate_vec3(
+        squat_from_axis_angle(
+            scene.camera.up_vec, disp_x),
+        eye_target_xz
+    );
     
+    // incorporate the vertical displacement,
+    // it will automatically limit the angle
+    // between -90 and 90 degrees.
+    eye_target_rot.y = eye_target_vec.y + disp_y * MPI;
+
+    // project the rotated eye-target vector onto
+    // the imaginary sphere centered at zero and
+    // of radius equal to the eye-target length.
+    // normal(rotated eye position) * eye_target_len
+    vec3f_t eye_target_proj = svec3_multiply_f(
+        svec3_normalize(eye_target_rot),
+        eye_target_len);
+
+    scene.camera.eye_pos = svec3_add(
+        scene.camera.target,
+        eye_target_proj
+    );
+
+    // update orbiting mouse position
+    app.mouse_orbit_pos = mouse_pos;
+}
+
+static void pan_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
+    float disp_x = (app.mouse_panning_pos.x - mouse_pos.x) * app.mouse_speed;
+    float disp_y = (mouse_pos.y - app.mouse_panning_pos.y) * app.mouse_speed;
+
+    vec3f_t eye_target_norm = svec3_normalize(eye_target_vec);
+    vec3f_t eye_target_xz = svec3(eye_target_vec.x, 0.0f, eye_target_vec.z);
+
+    // move the position and target on the
+    // Y along the up vector of the camera
+    quat_t zenith_rot = squat_from_vec3(
+        svec3_normalize(eye_target_xz),
+        eye_target_norm
+    );
+
+    // rotated up camera vector
+    vec3f_t up_vec = svec3_normalize(
+        squat_rotate_vec3(
+            zenith_rot,
+            svec3_normalize(scene.camera.up_vec)
+        ));
+
+    // the cross product of 2 unit vectors is itself a unit vector
+    vec3f_t right_vec = svec3_cross(eye_target_norm, up_vec);
+
+    vec3f_t disp_x_vec = svec3_multiply_f(right_vec, -disp_x);
+    vec3f_t disp_y_vec = svec3_multiply_f(up_vec, disp_y);
+    vec3f_t disp_vec = svec3_add(disp_x_vec, disp_y_vec);
+
+    scene.camera.eye_pos = svec3_add(scene.camera.eye_pos, disp_vec);
+    scene.camera.target = svec3_add(scene.camera.target, disp_vec);;
+    
+    app.mouse_panning_pos = mouse_pos;
+}
+
+static void zoom_camera(vec2f_t mouse_scroll, vec3f_t eye_target_vec) {
+
+    // avoid zero singularity
+    if (svec3_length(eye_target_vec) > mouse_scroll.y + MFLT_EPSILON) {
+        vec3f_t zoom_vec = svec3_multiply_f(
+            svec3_normalize(eye_target_vec), -mouse_scroll.y);
+
+        scene.camera.eye_pos = svec3_add(
+            scene.camera.eye_pos, zoom_vec);
+    }
+
+    app.mouse_scroll = mouse_scroll;
+}
+
+static void move_camera_event(const sapp_event* ev) {
+    bool mouse_btn_pressed = ev->type == SAPP_EVENTTYPE_MOUSE_DOWN;
+    vec2f_t mouse_pos = svec2(ev->mouse_x, ev->mouse_y);
+
     if (ev->mouse_button == SAPP_MOUSEBUTTON_LEFT) {
-        app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT] = pressed;
-        app.mouse_panning_pos = svec2(ev->mouse_x, ev->mouse_y);
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT] = mouse_btn_pressed;
     }
     
     if (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE) {
-        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = pressed;
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = mouse_btn_pressed;
+        app.mouse_panning_pos = mouse_pos;
     }
     
     if (ev->mouse_button == SAPP_MOUSEBUTTON_RIGHT) {
-        app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = pressed;
-        app.mouse_orbit_pos = svec2(ev->mouse_x, ev->mouse_y);
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = mouse_btn_pressed;
+        app.mouse_orbit_pos = mouse_pos;
+    }
+
+    if (ev->type == SAPP_EVENTTYPE_MOUSE_LEAVE) {
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT] = false;
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = false;
+        app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = false;
     }
 
     // eye-target vector
     vec3f_t eye_target_vec = svec3_subtract(
         scene.camera.eye_pos, scene.camera.target);
 
-    mfloat_t eye_target_len = svec3_length(eye_target_vec);
-    assert(eye_target_len > MFLT_EPSILON);
-    vec3f_t eye_target_norm = svec3_multiply_f(
-        eye_target_vec, 1.f / eye_target_len);
-
-    vec3f_t eye_target_xz = svec3(
-        eye_target_vec.x, 0.0f, eye_target_vec.z);
-
     // orbiting
     if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT]) {
+        orbit_camera(mouse_pos, eye_target_vec);   
+    }
     
-        float disp_x = (app.mouse_orbit_pos.x - ev->mouse_x) * app.mouse_speed;
-        float disp_y = (ev->mouse_y - app.mouse_orbit_pos.y) * app.mouse_speed;
-
-        // compute the rotational vector
-        // around the horizontal axis.
-        vec3f_t eye_target_rot = squat_rotate_vec3(
-            squat_from_axis_angle(
-                scene.camera.up_vec, disp_x),
-            eye_target_xz
-        );
-        
-        // incorporate the vertical displacement,
-        // it will automatically limit the angle
-        // between -90 and 90 degrees.
-        eye_target_rot.y = eye_target_vec.y + disp_y * MPI;
-
-        // project the rotated eye-target vector onto
-        // the imaginary sphere centered at zero and
-        // of radius equal to the eye-target length.
-        // normal(rotated eye position) * eye_target_len
-        vec3f_t eye_target_proj = svec3_multiply_f(
-            svec3_normalize(eye_target_rot),
-            eye_target_len);
-
-        // quat_t zenith_rot = squat_from_vec3(
-        //     svec3_normalize(eye_target_xz),
-        //     eye_target_norm
-        // );
-
-        // vec3f_t eye_target_proj = squat_rotate_vec3(
-        //     squat_from_axis_angle(
-        //         squat_axis(zenith_rot), disp_y),
-        //     eye_target_rot
-        // );
-
-        scene.camera.eye_pos = svec3_add(
-            scene.camera.target,
-            eye_target_proj
-        );
-
-        // update orbiting mouse position
-        app.mouse_orbit_pos = svec2(ev->mouse_x, ev->mouse_y);
+    // panning
+    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE]) {
+        pan_camera(mouse_pos, eye_target_vec);
     }
 
-    // panning
-    if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT]) {
-        float disp_x = (app.mouse_panning_pos.x - ev->mouse_x) *
-            app.mouse_speed;
-        
-        float disp_y = (ev->mouse_y - app.mouse_panning_pos.y) *
-            app.mouse_speed;
-
-        // move the position and target on the
-        // Y along the up vector of the camera
-        quat_t zenith_rot = squat_from_vec3(
-            svec3_normalize(eye_target_xz),
-            eye_target_norm
-        );
-
-        // rotated up camera vector
-        vec3f_t up_vec = svec3_normalize(
-            squat_rotate_vec3(
-                zenith_rot,
-                svec3_normalize(scene.camera.up_vec)
-            ));
-
-        // the cross product of 2 unit vectors is itself a unit vector
-        vec3f_t right_vec = svec3_cross(eye_target_norm, up_vec);
-
-        vec3f_t disp_x_vec = svec3_multiply_f(right_vec, -disp_x);
-        vec3f_t disp_y_vec = svec3_multiply_f(up_vec, disp_y);
-        vec3f_t disp_vec = svec3_add(disp_x_vec, disp_y_vec);
-
-        scene.camera.eye_pos = svec3_add(scene.camera.eye_pos, disp_vec);
-        scene.camera.target = svec3_add(scene.camera.target, disp_vec);;
-        
-        app.mouse_panning_pos = svec2(ev->mouse_x, ev->mouse_y);
+    // zooming
+    if (ev->type == SAPP_EVENTTYPE_MOUSE_SCROLL) {
+        zoom_camera(svec2(ev->scroll_x, ev->scroll_y), eye_target_vec);
     }
 
     app.mouse_pos = svec2(ev->mouse_x, ev->mouse_y);
