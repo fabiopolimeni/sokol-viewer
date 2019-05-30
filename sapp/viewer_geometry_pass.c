@@ -144,12 +144,12 @@ mesh_id_t geometry_pass_make_mesh_box(geometry_pass_t* pass,
     };
     
     uint32_t indices[] = {
-        0, 1, 2,  0, 2, 3,
-        6, 5, 4,  7, 6, 4,
-        8, 9, 10,  8, 10, 11,
-        14, 13, 12,  15, 14, 12,
-        16, 17, 18,  16, 18, 19,
-        22, 21, 20,  23, 22, 20
+        0, 2, 1,  0, 3, 2,
+        6, 4, 5,  7, 4, 6,
+        8, 10, 9,  8, 11, 10,
+        14, 12, 13,  15, 12, 14,
+        16, 18, 17,  16, 19, 18,
+        22, 20, 21,  23, 20, 22
     };
 
     return geometry_pass_make_mesh(pass, &(mesh_desc_t) {
@@ -515,6 +515,7 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
             .dst_factor_alpha = SG_BLENDFACTOR_ZERO,
         },
         .rasterizer = {
+            .face_winding = SG_FACEWINDING_CCW,
             .cull_mode = SG_CULLMODE_BACK,
             .sample_count = RASTERIZER_MSAA_SAMPLES
         },

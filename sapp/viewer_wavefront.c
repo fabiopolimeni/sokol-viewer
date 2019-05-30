@@ -93,8 +93,19 @@ wavefront_result_t wavefront_parse_obj(const wavefront_data_t* data,
 
             // populate element indices array
             mesh->indices[i_idx++] = idx0.v_idx;
-            mesh->indices[i_idx++] = idx1.v_idx;
-            mesh->indices[i_idx++] = idx2.v_idx;
+
+            // by default the we expect counter clock wise
+            // trinangles, but objects can be defined differently.
+            // therefore, we need a way to make the model consistent
+            // with the face winding of the render pass.s
+            if (data->import_options & WAVEFRONT_IMPORT_REWIND_FACES) {
+                mesh->indices[i_idx++] = idx2.v_idx;
+                mesh->indices[i_idx++] = idx1.v_idx;
+            }
+            else {
+                mesh->indices[i_idx++] = idx1.v_idx;
+                mesh->indices[i_idx++] = idx2.v_idx;
+            }
 
             // normals, and tex coordinates can be <= positions.
             // this allows us to duplicate normals and uv
@@ -152,6 +163,18 @@ wavefront_result_t wavefront_parse_obj(const wavefront_data_t* data,
                 mesh->vertices[idx0.v_idx].norm = svec3_zero();
                 mesh->vertices[idx1.v_idx].norm = svec3_zero();
                 mesh->vertices[idx2.v_idx].norm = svec3_zero();
+            }
+
+            if (data->import_options & WAVEFRONT_IMPORT_FLIP_NORMALS) {
+                mesh->vertices[idx0.v_idx].norm = svec3_multiply_f(
+                    mesh->vertices[idx0.v_idx].norm, -1.f
+                );
+                mesh->vertices[idx1.v_idx].norm = svec3_multiply_f(
+                    mesh->vertices[idx1.v_idx].norm, -1.f
+                );
+                mesh->vertices[idx2.v_idx].norm = svec3_multiply_f(
+                    mesh->vertices[idx1.v_idx].norm, -1.f
+                );
             }
 
             // set texture coordinates

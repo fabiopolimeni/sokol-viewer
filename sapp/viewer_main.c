@@ -113,11 +113,11 @@ static void setup_render() {
 
 static void setup_camera() {
     scene.camera = (camera_t){
-        .target = (vec3f_t){0.f, 5.f, 0.f},
-        .eye_pos = (vec3f_t){10.f, 2.f, 10.f},
+        .target = (vec3f_t){0.f, 0.f, 0.f},
+        .eye_pos = (vec3f_t){10.f, 0.f, 10.f},
         .up_vec = (vec3f_t){0.f,1.f,0.f},
         .fov = 45.0f,
-        .near_plane = 0.0f,
+        .near_plane = 0.1f,
         .far_plane = 100.0f,
         .width = (float)sapp_width(),
         .height = (float)sapp_height()
@@ -300,7 +300,9 @@ model_id_t load_wavefront_model(const char* filename) {
             .data_size = (int32_t)buffer_size,
             .atlas_width = 1024,
             .atlas_height = 1024,
-            .import_options = WAVEFRONT_IMPORT_DEFAULT,
+            .import_options = 
+                    //WAVEFRONT_IMPORT_REWIND_FACES
+                    WAVEFRONT_IMPORT_DEFAULT,
             .label = wf_name.name
         }, &wf_model);
 
