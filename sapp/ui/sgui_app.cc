@@ -23,9 +23,6 @@ typedef struct {
     bool open;
 } sa_imgui_stats_t;
 
-typedef struct {
-    bool open;
-} sa_imgui_settings_t;
 
 typedef struct {
     bool open;
@@ -35,12 +32,18 @@ typedef struct {
     sa_imgui_window_t window;
     sa_imgui_input_t input;
     sa_imgui_stats_t stats;
-    sa_imgui_settings_t settings;
     sa_imgui_log_t log;
+    app_t* app;
 } sa_imgui_t;
 
 static void sa_imgui_draw_window_content(sa_imgui_t* ctx){
-
+    assert(ctx && ctx->app);
+    ImGui::Text("Framebuffer");
+    ImGui::Separator();
+    ImGui::TextDisabled("Width: %d", sapp_width());
+    ImGui::TextDisabled("Height: %d", sapp_height());
+    ImGui::TextDisabled("DPI scale: %.2f", sapp_dpi_scale());
+    ImGui::TextDisabled("MSAA samples: %d", ctx->app->msaa_samples);
 }
 
 static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
@@ -48,10 +51,6 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
 }
 
 static void sa_imgui_draw_stats_content(sa_imgui_t* ctx){
-
-}
-
-static void sa_imgui_draw_settings_content(sa_imgui_t* ctx){
 
 }
 
@@ -63,27 +62,62 @@ static void sa_imgui_draw_window_window(sa_imgui_t* ctx){
     if (!ctx->window.open) {
         return;
     }
-	ImGui::SetNextWindowSize(ImVec2(540, 400), ImGuiCond_Once);
-    if (ImGui::Begin("Window", &ctx->window.open, ImGuiWindowFlags_None)) {
+
+	ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Once);
+    if (ImGui::Begin("Window", &ctx->window.open,
+        ImGuiWindowFlags_AlwaysAutoResize)) {
         sa_imgui_draw_window_content(ctx);
     }
     ImGui::End();
 }
 
 static void sa_imgui_draw_input_window(sa_imgui_t* ctx){
-
+    if (!ctx->input.open) {
+        return;
+    }
+    
+    ImGui::SetNextWindowSize(ImVec2(350, 220), ImGuiCond_Once);
+    if (ImGui::Begin("Input", &ctx->input.open,
+        ImGuiWindowFlags_AlwaysAutoResize)) {
+        sa_imgui_draw_input_content(ctx);
+    }
+    ImGui::End();
 }
 
 static void sa_imgui_draw_stats_window(sa_imgui_t* ctx){
-
-}
-
-static void sa_imgui_draw_settings_window(sa_imgui_t* ctx){
-
+    if (!ctx->stats.open) {
+        return;
+    }
+    
+    ImGui::SetNextWindowSize(ImVec2(350, 220), ImGuiCond_Once);
+    if (ImGui::Begin("Stats", &ctx->stats.open, 
+        ImGuiWindowFlags_AlwaysAutoResize)) {
+        sa_imgui_draw_stats_content(ctx);
+    }
+    ImGui::End();
 }
 
 static void sa_imgui_draw_log_window(sa_imgui_t* ctx){
+    if (!ctx->log.open) {
+        return;
+    }
+    
+    ImGui::SetNextWindowSize(ImVec2(600, 260), ImGuiCond_Once);
+    if (ImGui::Begin("Log", &ctx->log.open, 
+        ImGuiWindowFlags_AlwaysAutoResize)) {
+        sa_imgui_draw_log_content(ctx);
+    }
+    ImGui::End();
+}
 
+static void sa_imgui_draw_settings_menu(sa_imgui_t* ctx){
+    assert(ctx&& ctx->app);
+    if (ImGui::BeginMenu("Settings")) {
+        ImGui::MenuItem("Show Menu", "Alt+M", &ctx->app->show_menu);
+        ImGui::MenuItem("Show UI", "Ctrl+G", &ctx->app->show_ui);
+        ImGui::MenuItem("Render Scene", "Ctrl+R", &ctx->app->render_scene);
+        ImGui::EndMenu();
+    }
 }
 
 static void sa_imgui_init(sa_imgui_t* ctx) {
@@ -91,7 +125,6 @@ static void sa_imgui_init(sa_imgui_t* ctx) {
     ctx->window.open = false;
     ctx->input.open = false;
     ctx->stats.open = false;
-    ctx->settings.open = false;
     ctx->log.open = false;
 }
 
@@ -104,7 +137,6 @@ static void sa_imgui_draw(sa_imgui_t* ctx) {
     sa_imgui_draw_window_window(ctx);
     sa_imgui_draw_input_window(ctx);
     sa_imgui_draw_stats_window(ctx);
-    sa_imgui_draw_settings_window(ctx);
     sa_imgui_draw_log_window(ctx);
 }
 
@@ -113,6 +145,7 @@ static sgui_desc_t sgui_app;
 
 static void __setup(void* user) {
     sa_imgui_init(&sa_imgui);
+    sa_imgui.app = (app_t*)user;
 }
 
 static void __discard(void* user) {
@@ -126,8 +159,9 @@ static void __menu(void* user) {
         ImGui::MenuItem("Window", "Alt+W", &sa_imgui.window.open);
         ImGui::MenuItem("Input", "Alt+I", &sa_imgui.input.open);
         ImGui::MenuItem("Stats", "Alt+S", &sa_imgui.stats.open);
-        ImGui::MenuItem("Settings", "Alt+E", &sa_imgui.settings.open);
         ImGui::MenuItem("Log", "Alt+L", &sa_imgui.log.open);
+        ImGui::Separator();
+        sa_imgui_draw_settings_menu(&sa_imgui);
         ImGui::MenuItem("Exit", "Esc", &exit_app);
         ImGui::EndMenu();
     }

@@ -534,8 +534,9 @@ void event(const sapp_event* ev) {
         exit(EXIT_SUCCESS);
     }
 
-    // toggle menu visibility (Alt)
-    if (ev->modifiers & SAPP_MODIFIER_ALT) {
+    // toggle menu visibility (Alt+M)
+    if ((ev->modifiers & SAPP_MODIFIER_ALT)
+        && (ev->key_code == SAPP_KEYCODE_M)) {
         app.show_menu = !app.show_menu;
     }
 

@@ -8,10 +8,11 @@ extern "C" {
 #endif
 
 typedef struct {
-    uint8_t show_menu: 1;
-    uint8_t show_ui: 1;
-    uint8_t render_scene: 1;
-    uint8_t msaa_samples: 4;
+    bool show_menu;
+    bool show_ui;
+    bool render_scene;
+    
+    uint8_t msaa_samples;
 
     vec2f_t mouse_pos;
     vec2f_t mouse_orbit_pos;
