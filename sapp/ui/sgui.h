@@ -10,13 +10,14 @@
 extern "C" {
 #endif
 
-typedef void (*sgui_cb)();
+typedef void (*sgui_cb)(void* user);
 
 typedef struct {
     sgui_cb init_cb;
     sgui_cb shutdown_cb;
     sgui_cb menu_cb;
     sgui_cb draw_cb;
+    void* user_data;
 } sgui_desc_t;
 
 void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs);

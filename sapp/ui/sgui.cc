@@ -10,11 +10,10 @@
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#include "cimgui/cimgui.h"
+#include "imgui.h"
 
-#define SOKOL_CIMGUI_IMPL
-#include "sokol_cimgui.h"
+#define SOKOL_IMGUI_IMPL
+#include "sokol_imgui.h"
 
 #include "sgui.h"
 
@@ -29,7 +28,7 @@ static size_t sgui_desc_count = 0;
 for(size_t i = 0; i < sgui_desc_count; ++i) {\
     const sgui_desc_t* desc = &sgui_descs[i];\
     if (desc->funcName)\
-        desc->funcName();\
+        desc->funcName(desc->user_data);\
 }}
 
 void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {    
@@ -56,48 +55,37 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     SGUI_CALL_DESC_FUNC(init_cb)
 
     // setup the sokol-imgui utility header
-    scimgui_desc_t scimgui_desc = {0};
-    scimgui_desc.sample_count = sample_count;
-    scimgui_desc.dpi_scale = dpi_scale;
-    scimgui_setup(&scimgui_desc);
+    simgui_desc_t simgui_desc = {0};
+    simgui_desc.sample_count = sample_count;
+    simgui_desc.dpi_scale = dpi_scale;
+    simgui_setup(&simgui_desc);
 }
 
 void sgui_shutdown() {
-    scimgui_shutdown();
+    simgui_shutdown();
     SGUI_CALL_DESC_FUNC(shutdown_cb)
 }
 
 void sgui_draw_menu() {
-    bool exit_app = false;
-    if (igBeginMainMenuBar()) {
-        if (igBeginMenu("Viewer", true)) {
-
-            igMenuItemBoolPtr("Exit", "Esc", &exit_app, true);
-            igEndMenu();
-        }
-        
-        SGUI_CALL_DESC_FUNC(menu_cb)
-        igEndMainMenuBar();
-    }
-           
-    if (exit_app) {
-        exit(EXIT_SUCCESS);
+    if (ImGui::BeginMainMenuBar()) {
+       SGUI_CALL_DESC_FUNC(menu_cb)
+        ImGui::EndMainMenuBar();
     }
 }
 
 void sgui_draw(bool show_menu) {
-    scimgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
+    simgui_new_frame(sapp_width(), sapp_height(), 1.0/60.0);
 
     if (show_menu) {
         sgui_draw_menu();
     }
     
     SGUI_CALL_DESC_FUNC(draw_cb)
-    scimgui_render();
+    simgui_render();
 }
 
 void sgui_event(const sapp_event* e) {
-    scimgui_handle_event(e);
+    simgui_handle_event(e);
 }
 
 #if defined(__cplusplus)

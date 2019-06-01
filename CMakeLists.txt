@@ -11,7 +11,7 @@ include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
 fips_setup(PROJECT sokol-viewer)
 
-fips_import_fips_cimgui_cimgui()
+fips_import_fips_imgui_imgui()
 fips_import_fips_mathc_mathc()
 
 # just suppress this pesky "missing field initializer warning" for now

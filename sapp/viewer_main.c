@@ -13,7 +13,9 @@
 
 #include "ui/sgui.h"
 #include "ui/sgui_gfx.h"
+#include "ui/sgui_app.h"
 
+#include "viewer_app.h"
 #include "viewer_log.h"
 #include "viewer_math.h"
 #include "viewer_render.h"
@@ -25,20 +27,6 @@
 
 #define MSAA_SAMPLES 1
 #define MAX_BOXES 10
-
-typedef struct {
-    uint8_t show_menu: 1;
-    uint8_t show_ui: 1;
-    uint8_t render_scene: 1;
-    uint8_t msaa_samples: 4;
-
-    vec2f_t mouse_pos;
-    vec2f_t mouse_orbit_pos;
-    vec2f_t mouse_panning_pos;
-    vec2f_t mouse_scroll;
-    float mouse_speed;
-    bool mouse_button_pressed[3];
-} app_t;
 
 static app_t app = {
     .show_menu = true,
@@ -356,6 +344,7 @@ void init(void) {
     });
 
     const sgui_desc_t* sgui_descs[] = {
+        sgui_app_get(&app),
         sgui_gfx_get(),
         NULL
     };
