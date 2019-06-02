@@ -43,11 +43,40 @@ static void sa_imgui_draw_window_content(sa_imgui_t* ctx){
     ImGui::TextDisabled("Width: %d", sapp_width());
     ImGui::TextDisabled("Height: %d", sapp_height());
     ImGui::TextDisabled("DPI scale: %.2f", sapp_dpi_scale());
+    ImGui::TextDisabled("Swap interval: %d", ctx->app->swap_interval);
     ImGui::TextDisabled("MSAA samples: %d", ctx->app->msaa_samples);
 }
 
 static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
+    assert(ctx && ctx->app);
+    if (ImGui::CollapsingHeader("Mouse")) {
+        ImGui::TextDisabled("Position: (%04d, %04d)",
+            (int32_t)ctx->app->mouse_pos.x,
+            (int32_t)ctx->app->mouse_pos.y);
+        ImGui::TextDisabled("Scrolling: (%03d, %03d)",
+            (int32_t)ctx->app->mouse_scroll.x,
+            (int32_t)ctx->app->mouse_scroll.y);
+        ImGui::TextDisabled("Buttons:");
+        //ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+        bool add_separator = false;
+        if (ctx->app->mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT]) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("LEFT");
+            add_separator = true;
+        }
+        if (ctx->app->mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE]) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%c MIDDLE", (add_separator) ? '|' : ' ');
+            add_separator = true;
+        }
+        if (ctx->app->mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT]) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%c RIGHT", (add_separator) ? '|' : ' ');
+        }
+    }
 
+    // if (ImGui::CollapsingHeader("Camera")) {
+    // }
 }
 
 static void sa_imgui_draw_stats_content(sa_imgui_t* ctx){
@@ -76,9 +105,8 @@ static void sa_imgui_draw_input_window(sa_imgui_t* ctx){
         return;
     }
     
-    ImGui::SetNextWindowSize(ImVec2(350, 220), ImGuiCond_Once);
-    if (ImGui::Begin("Input", &ctx->input.open,
-        ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::SetNextWindowSize(ImVec2(200, 220), ImGuiCond_Once);
+    if (ImGui::Begin("Input", &ctx->input.open, ImGuiWindowFlags_None)) {
         sa_imgui_draw_input_content(ctx);
     }
     ImGui::End();

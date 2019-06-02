@@ -26,6 +26,7 @@
 #include "viewer_wavefront.h"
 
 #define MSAA_SAMPLES 1
+#define SWAP_INTERVAL 0
 #define MAX_BOXES 10
 
 static app_t app = {
@@ -33,6 +34,7 @@ static app_t app = {
     .show_ui = true,
     .render_scene = true,
     .msaa_samples = MSAA_SAMPLES,
+    .swap_interval = SWAP_INTERVAL,
     .mouse_pos = {0.f,0.f},
     .mouse_orbit_pos = {0.f,0.f},
     .mouse_panning_pos = {0.f,0.f},
@@ -476,13 +478,22 @@ static void zoom_camera(vec2f_t mouse_scroll, vec3f_t eye_target_vec) {
         scene.camera.eye_pos = svec3_add(
             scene.camera.eye_pos, zoom_vec);
     }
-
-    app.mouse_scroll = mouse_scroll;
 }
 
 static void move_camera_event(const sapp_event* ev) {
     bool mouse_btn_pressed = ev->type == SAPP_EVENTTYPE_MOUSE_DOWN;
-    vec2f_t mouse_pos = svec2(ev->mouse_x, ev->mouse_y);
+
+    // @fixme: for some reason SAPP reset mouse cursor position
+    //  if a scrolling action occurs. Therefore, do not update
+    //  mouse position if a scrolling operation is detected.
+    bool scrolling = 
+          (MFABS(ev->scroll_x) > MFLT_EPSILON
+        || MFABS(ev->scroll_y) > MFLT_EPSILON);
+
+    vec2f_t mouse_pos = scrolling ? 
+        app.mouse_pos : svec2(ev->mouse_x, ev->mouse_y);
+
+    vec2f_t mouse_scroll = svec2(ev->scroll_x, ev->scroll_y);
 
     if (ev->mouse_button == SAPP_MOUSEBUTTON_LEFT) {
         app.mouse_button_pressed[SAPP_MOUSEBUTTON_LEFT] = mouse_btn_pressed;
@@ -520,10 +531,11 @@ static void move_camera_event(const sapp_event* ev) {
 
     // zooming
     if (ev->type == SAPP_EVENTTYPE_MOUSE_SCROLL) {
-        zoom_camera(svec2(ev->scroll_x, ev->scroll_y), eye_target_vec);
+        zoom_camera(mouse_scroll, eye_target_vec);
     }
 
-    app.mouse_pos = svec2(ev->mouse_x, ev->mouse_y);
+    app.mouse_pos = mouse_pos;
+    app.mouse_scroll = mouse_scroll;
 }
 
 void event(const sapp_event* ev) {
@@ -620,6 +632,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 540,
         .high_dpi = true,
         .gl_force_gles2 = false,
+        .swap_interval = app.swap_interval,
         .window_title = "Viewer (sokol app)",
     };
 }
