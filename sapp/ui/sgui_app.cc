@@ -75,8 +75,18 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
         }
     }
 
-    // if (ImGui::CollapsingHeader("Camera")) {
-    // }
+    if (ImGui::CollapsingHeader("Camera")) {
+        ImGui::TextDisabled("Orbiting: (%04d, %04d)",
+            (int32_t)ctx->app->mouse_orbit_pos.x,
+            (int32_t)ctx->app->mouse_orbit_pos.y);
+        ImGui::TextDisabled("Panning: (%03d, %03d)",
+            (int32_t)ctx->app->mouse_panning_pos.x,
+            (int32_t)ctx->app->mouse_panning_pos.y);
+
+        float speed = ctx->app->mouse_speed * 10.f;
+        ImGui::DragFloat("Speed", &speed, 0.01f, 0.0f, 1.0f);
+        ctx->app->mouse_speed = speed * .1f;
+    }
 }
 
 static void sa_imgui_draw_stats_content(sa_imgui_t* ctx){

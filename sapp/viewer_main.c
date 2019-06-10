@@ -38,7 +38,7 @@ static app_t app = {
     .mouse_pos = {0.f,0.f},
     .mouse_orbit_pos = {0.f,0.f},
     .mouse_panning_pos = {0.f,0.f},
-    .mouse_speed = 0.01f,
+    .mouse_speed = 0.03f,
     .mouse_button_pressed = {0}
 };
 
@@ -104,7 +104,7 @@ static void setup_render() {
 static void setup_camera() {
     scene.camera = (camera_t){
         .target = (vec3f_t){0.f, 0.f, 0.f},
-        .eye_pos = (vec3f_t){10.f, 0.f, 10.f},
+        .eye_pos = (vec3f_t){0.f, 5.f, 10.f},
         .up_vec = (vec3f_t){0.f,1.f,0.f},
         .fov = 45.0f,
         .near_plane = 0.1f,
@@ -397,18 +397,27 @@ void cleanup(void) {
     sargs_shutdown();
 }
 
-static void orbit_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
+static void orbit_camera(vec2f_t mouse_pos) {
     float disp_x = (app.mouse_orbit_pos.x - mouse_pos.x) * app.mouse_speed;
     float disp_y = (mouse_pos.y - app.mouse_orbit_pos.y) * app.mouse_speed;
 
+    // eye-target vector
+    vec3f_t eye_target_vec = svec3_subtract(
+        scene.camera.eye_pos, scene.camera.target);
+
     mfloat_t eye_target_len = svec3_length(eye_target_vec);
     vec3f_t eye_target_xz = svec3(eye_target_vec.x, 0.0f, eye_target_vec.z);
+    
+    // avoid singularities
+    // if (svec3_length(eye_target_xz) < 0.001f) {
+    //     return;
+    // }
 
     // compute the rotational vector
-    // around the horizontal axis.
+    // around the vertical axis.
     vec3f_t eye_target_rot = squat_rotate_vec3(
         squat_from_axis_angle(
-            scene.camera.up_vec, disp_x),
+            scene.camera.up_vec, disp_x * 0.08f),
         eye_target_xz
     );
     
@@ -418,8 +427,8 @@ static void orbit_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
     eye_target_rot.y = eye_target_vec.y + disp_y * MPI;
 
     // project the rotated eye-target vector onto
-    // the imaginary sphere centered at zero and
-    // of radius equal to the eye-target length.
+    // the imaginary sphere of radius equal to the
+    // length of eye-target vector centered at zero.
     // normal(rotated eye position) * eye_target_len
     vec3f_t eye_target_proj = svec3_multiply_f(
         svec3_normalize(eye_target_rot),
@@ -434,29 +443,29 @@ static void orbit_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
     app.mouse_orbit_pos = mouse_pos;
 }
 
-static void pan_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
+static void pan_camera(vec2f_t mouse_pos) {
     float disp_x = (app.mouse_panning_pos.x - mouse_pos.x) * app.mouse_speed;
     float disp_y = (mouse_pos.y - app.mouse_panning_pos.y) * app.mouse_speed;
+
+    // eye-target vector
+    vec3f_t eye_target_vec = svec3_subtract(
+        scene.camera.eye_pos, scene.camera.target);
 
     vec3f_t eye_target_norm = svec3_normalize(eye_target_vec);
     vec3f_t eye_target_xz = svec3(eye_target_vec.x, 0.0f, eye_target_vec.z);
 
-    // move the position and target on the
-    // Y along the up vector of the camera
-    quat_t zenith_rot = squat_from_vec3(
+    // the cross product of 2 unit vectors is itself a unit vector
+    vec3f_t right_vec = svec3_cross(
         svec3_normalize(eye_target_xz),
-        eye_target_norm
+        svec3_normalize(scene.camera.up_vec)
     );
 
-    // rotated up camera vector
+    float right_angle =  MASIN(eye_target_norm.y);
     vec3f_t up_vec = svec3_normalize(
         squat_rotate_vec3(
-            zenith_rot,
+            squat_from_axis_angle(right_vec, right_angle),
             svec3_normalize(scene.camera.up_vec)
         ));
-
-    // the cross product of 2 unit vectors is itself a unit vector
-    vec3f_t right_vec = svec3_cross(eye_target_norm, up_vec);
 
     vec3f_t disp_x_vec = svec3_multiply_f(right_vec, -disp_x);
     vec3f_t disp_y_vec = svec3_multiply_f(up_vec, disp_y);
@@ -468,7 +477,10 @@ static void pan_camera(vec2f_t mouse_pos, vec3f_t eye_target_vec) {
     app.mouse_panning_pos = mouse_pos;
 }
 
-static void zoom_camera(vec2f_t mouse_scroll, vec3f_t eye_target_vec) {
+static void zoom_camera(vec2f_t mouse_scroll) {
+    // eye-target vector
+    vec3f_t eye_target_vec = svec3_subtract(
+        scene.camera.eye_pos, scene.camera.target);
 
     // avoid zero singularity
     if (svec3_length(eye_target_vec) > mouse_scroll.y + MFLT_EPSILON) {
@@ -515,23 +527,19 @@ static void move_camera_event(const sapp_event* ev) {
         app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = false;
     }
 
-    // eye-target vector
-    vec3f_t eye_target_vec = svec3_subtract(
-        scene.camera.eye_pos, scene.camera.target);
-
     // orbiting
     if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT]) {
-        orbit_camera(mouse_pos, eye_target_vec);   
+        orbit_camera(mouse_pos);   
     }
     
     // panning
     if (app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE]) {
-        pan_camera(mouse_pos, eye_target_vec);
+        pan_camera(mouse_pos);
     }
 
     // zooming
     if (ev->type == SAPP_EVENTTYPE_MOUSE_SCROLL) {
-        zoom_camera(mouse_scroll, eye_target_vec);
+        zoom_camera(mouse_scroll);
     }
 
     app.mouse_pos = mouse_pos;
