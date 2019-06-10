@@ -10,6 +10,7 @@ fips_add_subdirectory(ui)
 fips_add_subdirectory(tinyobjloader)
 fips_add_subdirectory(cute)
 fips_add_subdirectory(stb)
+fips_add_subdirectory(containers)
 
 #-------------------------------------------------------------------------------
 #   The viewer app with UI
@@ -21,5 +22,5 @@ if (FIPS_MSVC)
 endif()
     fips_files_ex(. viewer*.c NO_RECURSE)
     sokol_shader(shaders/geometry_pass.glsl ${slang})
-    fips_deps(sokol tinyobjloader mathc imgui sgui stb cute)
+    fips_deps(sokol tinyobjloader mathc imgui sgui stb cute containers)
 fips_end_app()

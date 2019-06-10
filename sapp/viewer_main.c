@@ -407,11 +407,6 @@ static void orbit_camera(vec2f_t mouse_pos) {
 
     mfloat_t eye_target_len = svec3_length(eye_target_vec);
     vec3f_t eye_target_xz = svec3(eye_target_vec.x, 0.0f, eye_target_vec.z);
-    
-    // avoid singularities
-    // if (svec3_length(eye_target_xz) < 0.001f) {
-    //     return;
-    // }
 
     // compute the rotational vector
     // around the vertical axis.
