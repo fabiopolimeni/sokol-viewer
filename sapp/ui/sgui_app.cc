@@ -1,6 +1,8 @@
 #include "sokol_app.h"
 #include "sgui_app.h"
+
 #include "../viewer_app.h"
+#include "../viewer_memory.h"
 
 #include "imgui.h"
 
@@ -21,8 +23,10 @@ typedef struct {
 
 typedef struct {
     bool open;
+    int32_t corner;
+    float* update_times_arr;
+    float* render_times_arr;
 } sa_imgui_stats_t;
-
 
 typedef struct {
     bool open;
@@ -77,20 +81,46 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
 
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::TextDisabled("Orbiting: (%04d, %04d)",
-            (int32_t)ctx->app->mouse_orbit_pos.x,
-            (int32_t)ctx->app->mouse_orbit_pos.y);
+            (int32_t)ctx->app->camera_orbit.x,
+            (int32_t)ctx->app->camera_orbit.y);
         ImGui::TextDisabled("Panning: (%03d, %03d)",
-            (int32_t)ctx->app->mouse_panning_pos.x,
-            (int32_t)ctx->app->mouse_panning_pos.y);
+            (int32_t)ctx->app->camera_panning.x,
+            (int32_t)ctx->app->camera_panning.y);
 
-        float speed = ctx->app->mouse_speed * 10.f;
+        float speed = ctx->app->camera_speed * 10.f;
         ImGui::DragFloat("Speed", &speed, 0.01f, 0.0f, 1.0f);
-        ctx->app->mouse_speed = speed * .1f;
+        ctx->app->camera_speed = speed * .1f;
     }
 }
 
-static void sa_imgui_draw_stats_content(sa_imgui_t* ctx){
+static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
+    ImGui::Text("Stats");
+    ImGui::Separator();
 
+    float avg_time =
+        ctx->app->stats.total_frames_time
+        / ctx->app->stats.max_frames;
+
+    int32_t fps = (avg_time > MFLT_EPSILON)
+        ? (int32_t)1.f/avg_time : 0;
+
+    ImGui::Text("Average: %3.1fms/%dfps", avg_time * 1000.f, fps);
+        
+    if (ImGui::BeginPopupContextWindow()) {
+        if (ImGui::MenuItem("Custom",       NULL, ctx->stats.corner == -1))
+            ctx->stats.corner = -1;
+        if (ImGui::MenuItem("Top-left",     NULL, ctx->stats.corner == 0)) 
+            ctx->stats.corner = 0;
+        if (ImGui::MenuItem("Top-right",    NULL, ctx->stats.corner == 1)) 
+            ctx->stats.corner = 1;
+        if (ImGui::MenuItem("Bottom-left",  NULL, ctx->stats.corner == 2)) 
+            ctx->stats.corner = 2;
+        if (ImGui::MenuItem("Bottom-right", NULL, ctx->stats.corner == 3)) 
+            ctx->stats.corner = 3;
+        if (ctx->stats.open && ImGui::MenuItem("Close"))
+            ctx->stats.open = false;
+        ImGui::EndPopup();
+    }
 }
 
 static void sa_imgui_draw_log_content(sa_imgui_t* ctx){
@@ -126,10 +156,33 @@ static void sa_imgui_draw_stats_window(sa_imgui_t* ctx){
     if (!ctx->stats.open) {
         return;
     }
-    
-    ImGui::SetNextWindowSize(ImVec2(350, 220), ImGuiCond_Once);
-    if (ImGui::Begin("Stats", &ctx->stats.open, 
-        ImGuiWindowFlags_AlwaysAutoResize)) {
+
+    const float DISTANCE = 10.0f;
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 window_size(
+        io.DisplaySize.x / io.DisplayFramebufferScale.x,
+        io.DisplaySize.y / io.DisplayFramebufferScale.y);
+
+    if (ctx->stats.corner != -1) {
+        ImVec2 window_pos = ImVec2(
+            (ctx->stats.corner & 1) ? window_size.x - DISTANCE : DISTANCE,
+            (ctx->stats.corner & 2) ? window_size.y - DISTANCE : DISTANCE);
+
+        ImVec2 window_pos_pivot = ImVec2(
+            (ctx->stats.corner & 1) ? 1.0f : 0.0f,
+            (ctx->stats.corner & 2) ? 1.0f : 0.0f);
+
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    }
+
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    if (ImGui::Begin("Stats overlay", &ctx->stats.open,
+        (ctx->stats.corner != -1 ? ImGuiWindowFlags_NoMove : 0) |
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav)) {
         sa_imgui_draw_stats_content(ctx);
     }
     ImGui::End();
@@ -162,12 +215,20 @@ static void sa_imgui_init(sa_imgui_t* ctx) {
     assert(ctx);
     ctx->window.open = false;
     ctx->input.open = false;
-    ctx->stats.open = false;
     ctx->log.open = false;
+
+    // stats context
+    ctx->stats.open = false;
+    ctx->stats.corner = 3;
+    ctx->stats.render_times_arr = (float*)memory_calloc(
+        ctx->app->stats.max_frames, sizeof(float));
+    ctx->stats.update_times_arr = (float*)memory_calloc(
+        ctx->app->stats.max_frames, sizeof(float));
 }
 
 static void sa_imgui_discard(sa_imgui_t* ctx){
-
+    memory_free(ctx->stats.render_times_arr);
+    memory_free(ctx->stats.update_times_arr);
 }
 
 static void sa_imgui_draw(sa_imgui_t* ctx) {
@@ -182,8 +243,8 @@ static sa_imgui_t sa_imgui;
 static sgui_desc_t sgui_app;
 
 static void __setup(void* user) {
-    sa_imgui_init(&sa_imgui);
     sa_imgui.app = (app_t*)user;
+    sa_imgui_init(&sa_imgui);
 }
 
 static void __discard(void* user) {

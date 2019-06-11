@@ -59,6 +59,9 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     simgui_desc.sample_count = sample_count;
     simgui_desc.dpi_scale = dpi_scale;
     simgui_setup(&simgui_desc);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.DisplayFramebufferScale = ImVec2(dpi_scale, dpi_scale);
 }
 
 void sgui_shutdown() {

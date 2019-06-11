@@ -8,6 +8,7 @@
 #include "sokol_args.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
+#include "sokol_time.h"
 
 #include "cute_path.h"
 
@@ -27,6 +28,7 @@
 
 #define MSAA_SAMPLES 1
 #define SWAP_INTERVAL 0
+#define STATS_FRAMES 60
 #define MAX_BOXES 10
 
 static app_t app = {
@@ -36,10 +38,11 @@ static app_t app = {
     .msaa_samples = MSAA_SAMPLES,
     .swap_interval = SWAP_INTERVAL,
     .mouse_pos = {0.f,0.f},
-    .mouse_orbit_pos = {0.f,0.f},
-    .mouse_panning_pos = {0.f,0.f},
-    .mouse_speed = 0.03f,
-    .mouse_button_pressed = {0}
+    .camera_orbit = {0.f,0.f},
+    .camera_panning = {0.f,0.f},
+    .camera_speed = 0.03f,
+    .mouse_button_pressed = {0},
+    .stats = {0}
 };
 
 // create a checkerboard texture 
@@ -354,14 +357,21 @@ void init(void) {
     // it is important to initialise the gui BEFORE the graphics 
     sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
 
+    // setup stats
+    stats_init(&app.stats, STATS_FRAMES);
+
     // init scene and graphics resources
     setup_render();
     setup_scene();
+
+    stm_setup();
 }
 
-void frame(void) {
+void update() {
     update_scene();
+}
 
+void render() {
     render_begin(&(clear_desc_t){
         .color = (vec4f_t){
             .x = ambient_color.x,
@@ -388,9 +398,23 @@ void frame(void) {
     render_end();
 }
 
+void frame(void) {
+    uint64_t begin = stm_now();
+    update();
+    float update_time_sec = (float)stm_sec(stm_since(begin));
+
+    begin = stm_now();
+    render();
+    float render_time_sec = (float)stm_sec(stm_since(begin));
+
+    stats_tick(&app.stats, update_time_sec, render_time_sec);
+}
+
 void cleanup(void) {
     clear_scene();
     clear_render();
+
+    stats_clean(&app.stats);
 
     sgui_shutdown();
     sg_shutdown();
@@ -398,8 +422,8 @@ void cleanup(void) {
 }
 
 static void orbit_camera(vec2f_t mouse_pos) {
-    float disp_x = (app.mouse_orbit_pos.x - mouse_pos.x) * app.mouse_speed;
-    float disp_y = (mouse_pos.y - app.mouse_orbit_pos.y) * app.mouse_speed;
+    float disp_x = (app.camera_orbit.x - mouse_pos.x) * app.camera_speed;
+    float disp_y = (mouse_pos.y - app.camera_orbit.y) * app.camera_speed;
 
     // eye-target vector
     vec3f_t eye_target_vec = svec3_subtract(
@@ -435,12 +459,12 @@ static void orbit_camera(vec2f_t mouse_pos) {
     );
 
     // update orbiting mouse position
-    app.mouse_orbit_pos = mouse_pos;
+    app.camera_orbit = mouse_pos;
 }
 
 static void pan_camera(vec2f_t mouse_pos) {
-    float disp_x = (app.mouse_panning_pos.x - mouse_pos.x) * app.mouse_speed;
-    float disp_y = (mouse_pos.y - app.mouse_panning_pos.y) * app.mouse_speed;
+    float disp_x = (app.camera_panning.x - mouse_pos.x) * app.camera_speed;
+    float disp_y = (mouse_pos.y - app.camera_panning.y) * app.camera_speed;
 
     // eye-target vector
     vec3f_t eye_target_vec = svec3_subtract(
@@ -469,7 +493,7 @@ static void pan_camera(vec2f_t mouse_pos) {
     scene.camera.eye_pos = svec3_add(scene.camera.eye_pos, disp_vec);
     scene.camera.target = svec3_add(scene.camera.target, disp_vec);;
     
-    app.mouse_panning_pos = mouse_pos;
+    app.camera_panning = mouse_pos;
 }
 
 static void zoom_camera(vec2f_t mouse_scroll) {
@@ -508,12 +532,12 @@ static void move_camera_event(const sapp_event* ev) {
     
     if (ev->mouse_button == SAPP_MOUSEBUTTON_MIDDLE) {
         app.mouse_button_pressed[SAPP_MOUSEBUTTON_MIDDLE] = mouse_btn_pressed;
-        app.mouse_panning_pos = mouse_pos;
+        app.camera_panning = mouse_pos;
     }
     
     if (ev->mouse_button == SAPP_MOUSEBUTTON_RIGHT) {
         app.mouse_button_pressed[SAPP_MOUSEBUTTON_RIGHT] = mouse_btn_pressed;
-        app.mouse_orbit_pos = mouse_pos;
+        app.camera_orbit = mouse_pos;
     }
 
     if (ev->type == SAPP_EVENTTYPE_MOUSE_LEAVE) {
