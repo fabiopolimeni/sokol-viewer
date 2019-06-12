@@ -99,7 +99,8 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
             (int32_t)ctx->app->camera_panning.y);
 
         float speed = ctx->app->camera_speed * 10.f;
-        ImGui::DragFloat("Speed", &speed, 0.01f, 0.0f, 1.0f);
+        ImGui::SetNextItemWidth(100);
+        ImGui::SliderFloat("Speed", &speed, 0.0f, 1.0f);
         ctx->app->camera_speed = speed * .1f;
     }
 }
@@ -174,8 +175,9 @@ static void sa_imgui_draw_window_window(sa_imgui_t* ctx){
         return;
     }
 
-	ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Once);
-    if (ImGui::Begin(ICON_FA_DESKTOP " " "Window", &ctx->window.open,
+	//ImGui::SetNextWindowSize(ImVec2(150, 0), ImGuiCond_Once);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(300, 300));
+    if (ImGui::Begin(ICON_FA_DESKTOP "   " "Window", &ctx->window.open,
         ImGuiWindowFlags_AlwaysAutoResize)) {
         sa_imgui_draw_window_content(ctx);
     }
@@ -187,9 +189,10 @@ static void sa_imgui_draw_input_window(sa_imgui_t* ctx){
         return;
     }
     
-    ImGui::SetNextWindowSize(ImVec2(200, 220), ImGuiCond_Once);
-    if (ImGui::Begin(ICON_FA_HAND_POINTER " " "Input",
-        &ctx->input.open, ImGuiWindowFlags_None)) {
+    //ImGui::SetNextWindowSize(ImVec2(200, 220), ImGuiCond_Once);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(300, 300));
+    if (ImGui::Begin(ICON_FA_HAND_POINTER "   " "Input", &ctx->input.open,
+        ImGuiWindowFlags_AlwaysAutoResize)) {
         sa_imgui_draw_input_content(ctx);
     }
     ImGui::End();

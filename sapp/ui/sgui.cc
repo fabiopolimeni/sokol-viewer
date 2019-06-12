@@ -118,11 +118,11 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     style.WindowPadding = ImVec2(6.f, 6.f);
     style.FramePadding = ImVec2(4.f, 2.f);
     style.ItemSpacing = ImVec2(8.f, 4.f);
-    style.ItemInnerSpacing = ImVec2(4.f, 4.f);
+    style.ItemInnerSpacing = ImVec2(8.f, 4.f);
     style.TouchExtraPadding = ImVec2(2.f, 2.f);
     style.IndentSpacing = 20.f;
-    style.ScrollbarSize = 6.f;
-    style.GrabMinSize = 4.f;
+    style.ScrollbarSize = 10.f;
+    style.GrabMinSize = 6.f;
 
     // style: borders
     style.WindowBorderSize = 0.f;
