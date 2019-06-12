@@ -42,6 +42,7 @@ static app_t app = {
     .camera_panning = {0.f,0.f},
     .camera_speed = 0.03f,
     .mouse_button_pressed = {0},
+    .window_bkg_color = {0.4f, 0.6f, 0.7f},
     .stats = {
         .max_frames = STATS_FRAMES
     }
@@ -79,9 +80,6 @@ static node_id_t box_node_ids[MAX_BOXES];
 
 static model_id_t wf_model_id = {HANDLE_INVALID_ID};
 static node_id_t wf_node_id = {HANDLE_INVALID_ID};
-
-static vec3f_t ambient_color = {0.4f, 0.6f, 0.7f};
-//static vec3f_t ambient_color = {1.0f, 1.0f, 1.0f};
 
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
@@ -122,9 +120,13 @@ static void setup_camera() {
 static void setup_lights() {
     scene.light = (light_t){
         .plane = (vec4f_t){-1.f, -1.f, -.4f, 0.f},
-        .color = ambient_color,
+        .color = app.window_bkg_color,
         .intensity = 16.f
     };
+}
+
+static void update_lights() {
+    scene.light.color = app.window_bkg_color;
 }
 
 static void setup_scene() {
@@ -370,15 +372,16 @@ void init(void) {
 }
 
 void update() {
+    update_lights();
     update_scene();
 }
 
 void render() {
     render_begin(&(clear_desc_t){
         .color = (vec4f_t){
-            .x = ambient_color.x,
-            .y = ambient_color.y,
-            .z = ambient_color.z,
+            .x = app.window_bkg_color.x,
+            .y = app.window_bkg_color.y,
+            .z = app.window_bkg_color.z,
             .w = 1.0f
         },
         .depth = 1.f,

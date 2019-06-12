@@ -46,11 +46,16 @@ static void sa_imgui_draw_window_content(sa_imgui_t* ctx){
     assert(ctx && ctx->app);
     ImGui::Text("Framebuffer");
     ImGui::Separator();
+
     ImGui::TextDisabled("Width: %d", sapp_width());
     ImGui::TextDisabled("Height: %d", sapp_height());
     ImGui::TextDisabled("DPI scale: %.2f", sapp_dpi_scale());
     ImGui::TextDisabled("Swap interval: %d", ctx->app->swap_interval);
     ImGui::TextDisabled("MSAA samples: %d", ctx->app->msaa_samples);
+    
+    ImGui::Separator();
+    ImGui::Text("Window");
+    ImGui::ColorEdit3("Background", &ctx->app->window_bkg_color.x);
 }
 
 static void sa_imgui_draw_input_content(sa_imgui_t* ctx){

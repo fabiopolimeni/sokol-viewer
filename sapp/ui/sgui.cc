@@ -11,6 +11,7 @@
 #include "sokol_app.h"
 
 #include "imgui.h"
+#include "imgui_font.h"
 
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
@@ -58,10 +59,66 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     simgui_desc_t simgui_desc = {0};
     simgui_desc.sample_count = sample_count;
     simgui_desc.dpi_scale = dpi_scale;
+    simgui_desc.no_default_font = true;
     simgui_setup(&simgui_desc);
 
     ImGuiIO& io = ImGui::GetIO();
+
+    // framebuffer
     io.DisplayFramebufferScale = ImVec2(dpi_scale, dpi_scale);
+
+    // font
+    ImFontConfig fontCfg;
+    fontCfg.FontDataOwnedByAtlas = false;
+    fontCfg.OversampleH = 4;
+    fontCfg.OversampleV = 4;
+    //fontCfg.RasterizerMultiply = 1.5f;
+    io.Fonts->AddFontFromMemoryTTF(dump_font, sizeof(dump_font), 14.0f, &fontCfg);
+
+    // create font texture for the custom font
+    unsigned char* font_pixels;
+    int font_width, font_height;
+    io.Fonts->GetTexDataAsRGBA32(&font_pixels, &font_width, &font_height);
+    sg_image_desc img_desc = { };
+    img_desc.width = font_width;
+    img_desc.height = font_height;
+    img_desc.pixel_format = SG_PIXELFORMAT_RGBA8;
+    img_desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
+    img_desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
+    img_desc.min_filter = SG_FILTER_LINEAR;
+    img_desc.mag_filter = SG_FILTER_LINEAR;
+    img_desc.content.subimage[0][0].ptr = font_pixels;
+    img_desc.content.subimage[0][0].size = font_width * font_height * 4;
+    io.Fonts->TexID = (ImTextureID)(uintptr_t) sg_make_image(&img_desc).id;
+
+    // style
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    // style: rounding
+    style.WindowRounding = 0.f;
+    style.ChildRounding = 0.f;
+    style.FrameRounding = 0.f;
+    style.PopupRounding = 0.f;
+    style.ScrollbarRounding = 0.f;
+    style.GrabRounding = 0.f;
+    style.TabRounding = 0.f;
+
+    // style: padding and spacing
+    style.WindowPadding = ImVec2(4.f, 4.f);
+    style.FramePadding = ImVec2(2.f, 2.f);
+    style.ItemSpacing = ImVec2(4.f, 4.f);
+    style.ItemInnerSpacing = ImVec2(4.f, 4.f);
+    style.TouchExtraPadding = ImVec2(0.f, 0.f);
+    style.IndentSpacing = 20.f;
+    style.ScrollbarSize = 6.f;
+    style.GrabMinSize = 4.f;
+
+    // style: borders
+    style.WindowBorderSize = 0.f;
+    style.ChildBorderSize = 0.f;
+    style.PopupBorderSize = 0.f;
+    style.FrameBorderSize = 0.f;
+    style.TabBorderSize = 0.f;
 }
 
 void sgui_shutdown() {

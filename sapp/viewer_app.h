@@ -25,6 +25,8 @@ typedef struct {
     vec2f_t mouse_scroll;
     bool mouse_button_pressed[3];
 
+    vec3f_t window_bkg_color;
+
     stats_t stats;
 } app_t;
 
