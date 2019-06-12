@@ -9,7 +9,11 @@ extern "C" {
 typedef struct {
     float* update_times;
     float* render_times;
+    
+    float total_update_time;
+    float total_render_time;
     float total_frames_time;
+    
     uint32_t stored_frames;
     uint32_t max_frames;
 } stats_t;

@@ -5,8 +5,10 @@
 #include "../viewer_memory.h"
 
 #include "imgui.h"
+#include "imgui_plot.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 #if defined(__cplusplus)
@@ -98,13 +100,30 @@ static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
     ImGui::Separator();
 
     float avg_time =
-        ctx->app->stats.total_frames_time
-        / ctx->app->stats.max_frames;
+        ctx->app->stats.total_frames_time / ctx->app->stats.max_frames;
 
-    int32_t fps = (avg_time > MFLT_EPSILON)
-        ? (int32_t)1.f/avg_time : 0;
+    int32_t fps = (avg_time > MFLT_EPSILON) ? (int32_t)1.f/avg_time : 0;
 
-    ImGui::Text("Average: %3.1fms/%dfps", avg_time * 1000.f, fps);
+    ImGui::Text("Total Average: %3.1fms/%dfps", avg_time * 1000.f, fps);
+
+    uint32_t n_frames = stats_get_timings(
+        &ctx->app->stats,
+        ctx->stats.update_times_arr,
+        ctx->stats.render_times_arr);
+
+    char label_time[32] = {0};
+
+    float update_time = 
+        ctx->app->stats.total_update_time / ctx->app->stats.max_frames;
+    sprintf(label_time, "Update: %2.2fms", update_time * 1000.f);
+    ImGui::PlotLines(label_time, ctx->stats.update_times_arr, n_frames,
+        0, '\0', 0.0f, 0.033f);
+
+    float render_time =
+        ctx->app->stats.total_render_time / ctx->app->stats.max_frames;
+    sprintf(label_time, "Render: %2.2fms", render_time * 1000.f);
+    ImGui::PlotLines(label_time, ctx->stats.render_times_arr, n_frames,
+        0, '\0', 0.0f, 0.033f);
         
     if (ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Custom",       NULL, ctx->stats.corner == -1))
@@ -218,7 +237,7 @@ static void sa_imgui_init(sa_imgui_t* ctx) {
     ctx->log.open = false;
 
     // stats context
-    ctx->stats.open = false;
+    ctx->stats.open = true;
     ctx->stats.corner = 3;
     ctx->stats.render_times_arr = (float*)memory_calloc(
         ctx->app->stats.max_frames, sizeof(float));

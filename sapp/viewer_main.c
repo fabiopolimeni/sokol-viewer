@@ -42,7 +42,9 @@ static app_t app = {
     .camera_panning = {0.f,0.f},
     .camera_speed = 0.03f,
     .mouse_button_pressed = {0},
-    .stats = {0}
+    .stats = {
+        .max_frames = STATS_FRAMES
+    }
 };
 
 // create a checkerboard texture 
@@ -354,11 +356,11 @@ void init(void) {
         NULL
     };
 
-    // it is important to initialise the gui BEFORE the graphics 
-    sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
-
     // setup stats
     stats_init(&app.stats, STATS_FRAMES);
+
+    // it is important to initialise the gui BEFORE the graphics 
+    sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
 
     // init scene and graphics resources
     setup_render();
@@ -394,7 +396,7 @@ void render() {
     if (app.show_ui) {
         sgui_draw(app.show_menu);
     }
-
+    
     render_end();
 }
 
@@ -414,9 +416,10 @@ void cleanup(void) {
     clear_scene();
     clear_render();
 
+    sgui_shutdown();
+
     stats_clean(&app.stats);
 
-    sgui_shutdown();
     sg_shutdown();
     sargs_shutdown();
 }

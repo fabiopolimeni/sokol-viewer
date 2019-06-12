@@ -35,14 +35,17 @@ void stats_tick(stats_t* stats, float update_time, float render_time) {
     stats->update_times[head_idx] = update_time;
     stats->render_times[head_idx] = render_time;
 
+    stats->total_update_time += update_time;
+    stats->total_render_time += render_time;
     stats->total_frames_time += update_time + render_time;
 
     uint32_t tail_idx = (head_idx + 1) % stats->max_frames;
-    float tail_frame_time =
-        stats->update_times[tail_idx] +
-        stats->render_times[tail_idx];
+    float tail_update_time = stats->update_times[tail_idx];
+    float tail_render_time = stats->render_times[tail_idx];
 
-    stats->total_frames_time -= tail_frame_time;
+    stats->total_update_time -= tail_update_time;
+    stats->total_render_time -= tail_render_time;
+    stats->total_frames_time -= tail_update_time + tail_render_time;
     
     stats->stored_frames++;
 }
@@ -72,14 +75,14 @@ uint32_t stats_get_timings(const stats_t* stats,
 
     // copy the left part of the ring buffer into
     // the right part of the output arrays, starting
-    // from the last tail element.
+    // from the last tail element (tail_idx).
     uint32_t left_elems = stats->max_frames - right_elems;
     
     // zero checks are not necessary as memcpy deals with it
     uint32_t left_size = left_elems * sizeof(float);
 
-    memcpy(update_arr + tail_idx, stats->update_times, left_size);
-    memcpy(render_arr + tail_idx, stats->render_times, left_size);
+    memcpy(update_arr + right_elems, stats->update_times, left_size);
+    memcpy(render_arr + right_elems, stats->render_times, left_size);
 
     return left_elems + right_elems;
 }
