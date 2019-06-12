@@ -27,7 +27,7 @@ typedef struct {
 
     vec3f_t window_bkg_color;
 
-    stats_t stats;
+    stats_t* stats;
 } app_t;
 
 #if defined(__cplusplus)

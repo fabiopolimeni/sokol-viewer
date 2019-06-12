@@ -1,6 +1,7 @@
 #define SOKOL_IMPL
 #define SOKOL_D3D11_SHADER_COMPILER
 #if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #define SOKOL_LOG(s) OutputDebugStringA(s)
 #endif

@@ -12,6 +12,7 @@
 
 #include "imgui.h"
 #include "imgui_font.h"
+#include "font_awesome_5.h"
 
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
@@ -68,12 +69,22 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     io.DisplayFramebufferScale = ImVec2(dpi_scale, dpi_scale);
 
     // font
-    ImFontConfig fontCfg;
-    fontCfg.FontDataOwnedByAtlas = false;
-    fontCfg.OversampleH = 4;
-    fontCfg.OversampleV = 4;
-    //fontCfg.RasterizerMultiply = 1.5f;
-    io.Fonts->AddFontFromMemoryTTF(dump_font, sizeof(dump_font), 14.0f, &fontCfg);
+    ImFontConfig font_config;
+    font_config.FontDataOwnedByAtlas = false;
+    font_config.OversampleH = 4;
+    font_config.OversampleV = 4;
+    //font_config.RasterizerMultiply = 1.5f;
+    io.Fonts->AddFontFromMemoryTTF(
+        dump_font, sizeof(dump_font), 14.0f, &font_config);
+
+    // icons from Font Awesome
+    static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+    ImFontConfig icons_config;
+    icons_config.MergeMode = true;
+    icons_config.PixelSnapH = true;
+    io.Fonts->AddFontFromFileTTF(
+        "fonts/" FONT_ICON_FILE_NAME_FAS, 14.0f,
+        &icons_config, icons_ranges);
 
     // create font texture for the custom font
     unsigned char* font_pixels;
@@ -104,11 +115,11 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
     style.TabRounding = 0.f;
 
     // style: padding and spacing
-    style.WindowPadding = ImVec2(4.f, 4.f);
-    style.FramePadding = ImVec2(2.f, 2.f);
-    style.ItemSpacing = ImVec2(4.f, 4.f);
+    style.WindowPadding = ImVec2(6.f, 6.f);
+    style.FramePadding = ImVec2(4.f, 2.f);
+    style.ItemSpacing = ImVec2(8.f, 4.f);
     style.ItemInnerSpacing = ImVec2(4.f, 4.f);
-    style.TouchExtraPadding = ImVec2(0.f, 0.f);
+    style.TouchExtraPadding = ImVec2(2.f, 2.f);
     style.IndentSpacing = 20.f;
     style.ScrollbarSize = 6.f;
     style.GrabMinSize = 4.f;

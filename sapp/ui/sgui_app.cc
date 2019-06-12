@@ -6,6 +6,7 @@
 
 #include "imgui.h"
 #include "imgui_plot.h"
+#include "font_awesome_5.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,10 +25,11 @@ typedef struct {
 } sa_imgui_input_t;
 
 typedef struct {
-    bool open;
-    int32_t corner;
     float* update_times_arr;
     float* render_times_arr;
+    int32_t corner;
+    bool open;
+    bool animate;
 } sa_imgui_stats_t;
 
 typedef struct {
@@ -54,13 +56,15 @@ static void sa_imgui_draw_window_content(sa_imgui_t* ctx){
     ImGui::TextDisabled("MSAA samples: %d", ctx->app->msaa_samples);
     
     ImGui::Separator();
-    ImGui::Text("Window");
-    ImGui::ColorEdit3("Background", &ctx->app->window_bkg_color.x);
+    ImGui::Text("Render Surface");
+    ImGui::ColorEdit3("Background", &ctx->app->window_bkg_color.x,
+        ImGuiColorEditFlags_Uint8 |
+        ImGuiColorEditFlags_NoInputs);
 }
 
 static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
     assert(ctx && ctx->app);
-    if (ImGui::CollapsingHeader("Mouse")) {
+    if (ImGui::CollapsingHeader(ICON_FA_MOUSE_POINTER " " "Mouse")) {
         ImGui::TextDisabled("Position: (%04d, %04d)",
             (int32_t)ctx->app->mouse_pos.x,
             (int32_t)ctx->app->mouse_pos.y);
@@ -86,7 +90,7 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
         }
     }
 
-    if (ImGui::CollapsingHeader("Camera")) {
+    if (ImGui::CollapsingHeader(ICON_FA_VIDEO" ""Camera")) {
         ImGui::TextDisabled("Orbiting: (%04d, %04d)",
             (int32_t)ctx->app->camera_orbit.x,
             (int32_t)ctx->app->camera_orbit.y);
@@ -101,31 +105,45 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
 }
 
 static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
-    ImGui::Text("Stats");
+    ImGui::Text(ICON_FA_CHART_AREA "   " "Stats");
+    
+    ImVec2 win_size = ImGui::GetWindowSize();
+    ImGui::SameLine(win_size.x - 30.f);
+    
+    const char* button_icon = (ctx->stats.animate)
+        ? ICON_FA_PAUSE : ICON_FA_PLAY;
+    if (ImGui::Button(button_icon)) {
+        ctx->stats.animate = !ctx->stats.animate;
+    }
+
     ImGui::Separator();
 
     float avg_time =
-        ctx->app->stats.total_frames_time / ctx->app->stats.max_frames;
+        ctx->app->stats->total_frames_time / ctx->app->stats->max_frames;
 
     int32_t fps = (avg_time > MFLT_EPSILON) ? (int32_t)1.f/avg_time : 0;
 
     ImGui::Text("Total Average: %3.1fms/%dfps", avg_time * 1000.f, fps);
 
-    uint32_t n_frames = stats_get_timings(
-        &ctx->app->stats,
-        ctx->stats.update_times_arr,
-        ctx->stats.render_times_arr);
+    // grab new data if animate is true,
+    // otherwise use the ones from last time.
+    uint32_t n_frames = ctx->stats.animate
+        ? stats_get_timings(
+            ctx->app->stats,
+            ctx->stats.update_times_arr,
+            ctx->stats.render_times_arr)
+        : ctx->app->stats->max_frames;
 
     char label_time[32] = {0};
 
     float update_time = 
-        ctx->app->stats.total_update_time / ctx->app->stats.max_frames;
+        ctx->app->stats->total_update_time / ctx->app->stats->max_frames;
     sprintf(label_time, "Update: %2.2fms", update_time * 1000.f);
     ImGui::PlotLines(label_time, ctx->stats.update_times_arr, n_frames,
         0, '\0', 0.0f, 0.033f);
 
     float render_time =
-        ctx->app->stats.total_render_time / ctx->app->stats.max_frames;
+        ctx->app->stats->total_render_time / ctx->app->stats->max_frames;
     sprintf(label_time, "Render: %2.2fms", render_time * 1000.f);
     ImGui::PlotLines(label_time, ctx->stats.render_times_arr, n_frames,
         0, '\0', 0.0f, 0.033f);
@@ -157,7 +175,7 @@ static void sa_imgui_draw_window_window(sa_imgui_t* ctx){
     }
 
 	ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Once);
-    if (ImGui::Begin("Window", &ctx->window.open,
+    if (ImGui::Begin(ICON_FA_DESKTOP " " "Window", &ctx->window.open,
         ImGuiWindowFlags_AlwaysAutoResize)) {
         sa_imgui_draw_window_content(ctx);
     }
@@ -170,7 +188,8 @@ static void sa_imgui_draw_input_window(sa_imgui_t* ctx){
     }
     
     ImGui::SetNextWindowSize(ImVec2(200, 220), ImGuiCond_Once);
-    if (ImGui::Begin("Input", &ctx->input.open, ImGuiWindowFlags_None)) {
+    if (ImGui::Begin(ICON_FA_HAND_POINTER " " "Input",
+        &ctx->input.open, ImGuiWindowFlags_None)) {
         sa_imgui_draw_input_content(ctx);
     }
     ImGui::End();
@@ -199,8 +218,9 @@ static void sa_imgui_draw_stats_window(sa_imgui_t* ctx){
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     }
 
+    //ImGui::SetNextWindowSize(ImVec2(300.0f, 0.0f));
     ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-    if (ImGui::Begin("Stats overlay", &ctx->stats.open,
+    if (ImGui::Begin("Stats Overlay", &ctx->stats.open,
         (ctx->stats.corner != -1 ? ImGuiWindowFlags_NoMove : 0) |
         ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_AlwaysAutoResize |
@@ -218,7 +238,7 @@ static void sa_imgui_draw_log_window(sa_imgui_t* ctx){
     }
     
     ImGui::SetNextWindowSize(ImVec2(600, 260), ImGuiCond_Once);
-    if (ImGui::Begin("Log", &ctx->log.open, 
+    if (ImGui::Begin(ICON_FA_TERMINAL " " "Log", &ctx->log.open, 
         ImGuiWindowFlags_AlwaysAutoResize)) {
         sa_imgui_draw_log_content(ctx);
     }
@@ -227,7 +247,7 @@ static void sa_imgui_draw_log_window(sa_imgui_t* ctx){
 
 static void sa_imgui_draw_settings_menu(sa_imgui_t* ctx){
     assert(ctx&& ctx->app);
-    if (ImGui::BeginMenu("Settings")) {
+    if (ImGui::BeginMenu(ICON_FA_COG " " "Settings")) {
         ImGui::MenuItem("Show Menu", "Alt+M", &ctx->app->show_menu);
         ImGui::MenuItem("Show UI", "Ctrl+G", &ctx->app->show_ui);
         ImGui::MenuItem("Render Scene", "Ctrl+R", &ctx->app->render_scene);
@@ -243,11 +263,12 @@ static void sa_imgui_init(sa_imgui_t* ctx) {
 
     // stats context
     ctx->stats.open = true;
+    ctx->stats.animate = true;
     ctx->stats.corner = 3;
     ctx->stats.render_times_arr = (float*)memory_calloc(
-        ctx->app->stats.max_frames, sizeof(float));
+        ctx->app->stats->max_frames, sizeof(float));
     ctx->stats.update_times_arr = (float*)memory_calloc(
-        ctx->app->stats.max_frames, sizeof(float));
+        ctx->app->stats->max_frames, sizeof(float));
 }
 
 static void sa_imgui_discard(sa_imgui_t* ctx){
@@ -279,13 +300,13 @@ static void __menu(void* user) {
     bool exit_app = false;
 
     if (ImGui::BeginMenu("App", true)) {
-        ImGui::MenuItem("Window", "Alt+W", &sa_imgui.window.open);
-        ImGui::MenuItem("Input", "Alt+I", &sa_imgui.input.open);
-        ImGui::MenuItem("Stats", "Alt+S", &sa_imgui.stats.open);
-        ImGui::MenuItem("Log", "Alt+L", &sa_imgui.log.open);
+        ImGui::MenuItem(ICON_FA_DESKTOP "  " "Window", "Alt+W", &sa_imgui.window.open);
+        ImGui::MenuItem(ICON_FA_HAND_POINTER "   " "Input", "Alt+I", &sa_imgui.input.open);
+        ImGui::MenuItem(ICON_FA_CHART_AREA "  " "Stats", "Alt+S", &sa_imgui.stats.open);
+        ImGui::MenuItem(ICON_FA_TERMINAL " " "Log", "Alt+L", &sa_imgui.log.open);
         ImGui::Separator();
         sa_imgui_draw_settings_menu(&sa_imgui);
-        ImGui::MenuItem("Exit", "Esc", &exit_app);
+        ImGui::MenuItem(ICON_FA_SIGN_OUT_ALT " " "Exit", "Esc", &exit_app);
         ImGui::EndMenu();
     }
 

@@ -31,23 +31,6 @@
 #define STATS_FRAMES 60
 #define MAX_BOXES 10
 
-static app_t app = {
-    .show_menu = true,
-    .show_ui = true,
-    .render_scene = true,
-    .msaa_samples = MSAA_SAMPLES,
-    .swap_interval = SWAP_INTERVAL,
-    .mouse_pos = {0.f,0.f},
-    .camera_orbit = {0.f,0.f},
-    .camera_panning = {0.f,0.f},
-    .camera_speed = 0.03f,
-    .mouse_button_pressed = {0},
-    .window_bkg_color = {0.4f, 0.6f, 0.7f},
-    .stats = {
-        .max_frames = STATS_FRAMES
-    }
-};
-
 // create a checkerboard texture 
 static uint32_t checkerboard_pixels[4*4] = {
     0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
@@ -80,6 +63,25 @@ static node_id_t box_node_ids[MAX_BOXES];
 
 static model_id_t wf_model_id = {HANDLE_INVALID_ID};
 static node_id_t wf_node_id = {HANDLE_INVALID_ID};
+
+static stats_t stats = {
+    .max_frames = STATS_FRAMES
+};
+
+static app_t app = {
+    .show_menu = true,
+    .show_ui = true,
+    .render_scene = true,
+    .msaa_samples = MSAA_SAMPLES,
+    .swap_interval = SWAP_INTERVAL,
+    .mouse_pos = {0.f,0.f},
+    .camera_orbit = {0.f,0.f},
+    .camera_panning = {0.f,0.f},
+    .camera_speed = 0.03f,
+    .mouse_button_pressed = {0},
+    .window_bkg_color = {0.4f, 0.6f, 0.7f},
+    .stats = &stats
+};
 
 static void setup_render() {
     geometry_pass_init(&geometry_pass);
@@ -359,7 +361,7 @@ void init(void) {
     };
 
     // setup stats
-    stats_init(&app.stats, STATS_FRAMES);
+    stats_init(app.stats, STATS_FRAMES);
 
     // it is important to initialise the gui BEFORE the graphics 
     sgui_setup(app.msaa_samples, sapp_dpi_scale(), sgui_descs);
@@ -412,7 +414,7 @@ void frame(void) {
     render();
     float render_time_sec = (float)stm_sec(stm_since(begin));
 
-    stats_tick(&app.stats, update_time_sec, render_time_sec);
+    stats_tick(app.stats, update_time_sec, render_time_sec);
 }
 
 void cleanup(void) {
@@ -421,7 +423,7 @@ void cleanup(void) {
 
     sgui_shutdown();
 
-    stats_clean(&app.stats);
+    stats_clean(app.stats);
 
     sg_shutdown();
     sargs_shutdown();
