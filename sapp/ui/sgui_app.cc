@@ -6,6 +6,7 @@
 
 #include "imgui.h"
 #include "imgui_plot.h"
+#include "imguial_log.h"
 #include "font_awesome_5.h"
 
 #include <stdlib.h>
@@ -33,6 +34,7 @@ typedef struct {
 } sa_imgui_stats_t;
 
 typedef struct {
+    ImGuiAl::Log im_log;
     bool open;
 } sa_imgui_log_t;
 
@@ -107,10 +109,10 @@ static void sa_imgui_draw_input_content(sa_imgui_t* ctx){
 
 static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
     ImGui::Text(ICON_FA_CHART_AREA "   " "Stats");
-    
+
     ImVec2 win_size = ImGui::GetWindowSize();
     ImGui::SameLine(win_size.x - 30.f);
-    
+
     const char* button_icon = (ctx->stats.animate)
         ? ICON_FA_PAUSE : ICON_FA_PLAY;
     if (ImGui::Button(button_icon)) {
@@ -148,7 +150,7 @@ static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
     sprintf(label_time, "Render: %2.2fms", render_time * 1000.f);
     ImGui::PlotLines(label_time, ctx->stats.render_times_arr, n_frames,
         0, '\0', 0.0f, 0.033f);
-        
+
     if (ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Custom",       NULL, ctx->stats.corner == -1))
             ctx->stats.corner = -1;
@@ -166,11 +168,15 @@ static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
     }
 }
 
-static void sa_imgui_draw_log_content(sa_imgui_t* ctx){
+static void sa_imgui_draw_log_content(sa_imgui_t* ctx) {
+    assert(ctx);
+    
+    // @todo: grab data from the app log and push it into the gui log
 
+    ctx->log.im_log.Draw();
 }
 
-static void sa_imgui_draw_window_window(sa_imgui_t* ctx){
+static void sa_imgui_draw_window_window(sa_imgui_t* ctx) {
     if (!ctx->window.open) {
         return;
     }
@@ -272,6 +278,22 @@ static void sa_imgui_init(sa_imgui_t* ctx) {
         ctx->app->stats->max_frames, sizeof(float));
     ctx->stats.update_times_arr = (float*)memory_calloc(
         ctx->app->stats->max_frames, sizeof(float));
+
+    // log context
+    static const char* log_actions[] = {
+        ICON_FA_COPY " Copy",
+        ICON_FA_TRASH_ALT " Clear",
+        NULL
+    };
+
+    ctx->log.im_log.Init( 0, log_actions );
+    ctx->log.im_log.SetLabel( ImGuiAl::Log::kDebug, ICON_FA_BUG " Debug" );
+    ctx->log.im_log.SetLabel( ImGuiAl::Log::kInfo, ICON_FA_INFO " Info" );
+    ctx->log.im_log.SetLabel( ImGuiAl::Log::kWarn, ICON_FA_EXCLAMATION_TRIANGLE " Warn" );
+    ctx->log.im_log.SetLabel( ImGuiAl::Log::kError, ICON_FA_WRENCH " Error" );
+    ctx->log.im_log.SetCumulativeLabel( ICON_FA_SORT_AMOUNT_DOWN " Cumulative" );
+    ctx->log.im_log.SetFilterHeaderLabel( ICON_FA_FILTER " Filters" );
+    ctx->log.im_log.SetFilterLabel( ICON_FA_SEARCH " Filter (inc,-exc)" );
 }
 
 static void sa_imgui_discard(sa_imgui_t* ctx){
