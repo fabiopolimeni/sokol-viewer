@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-const static mesh_t empty_mesh = {
+static const mesh_t empty_mesh = {
     .num_elements = 0,
     .vbuf = -1,
     .ibuf = -1,
@@ -25,7 +25,7 @@ static bool mesh_is_empty(const mesh_t* mesh) {
     return memcmp(mesh, &empty_mesh, sizeof(mesh_t)) == 0;
 }
 
-const static material_t empty_material = {
+static const material_t empty_material = {
     .albedo_transparency = -1,
     .emissive_specular = -1,
     .trace = {0}
@@ -35,7 +35,7 @@ static bool material_is_empty(const material_t* material) {
     return memcmp(material, &empty_material, sizeof(material_t)) == 0;
 }
 
-const static model_t empty_model = {
+static const model_t empty_model = {
     .mesh_id = {.id = HANDLE_INVALID_ID},
     .material_id = {.id = HANDLE_INVALID_ID},
     .trace = {0}

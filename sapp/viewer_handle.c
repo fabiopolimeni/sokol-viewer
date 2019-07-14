@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-bool handle_is_valid(struct handle_t handle, size_t max_count) {
+bool handle_is_valid(struct handle_t handle, int32_t max_count) {
     return (handle.id >= 0 && handle.id < max_count);
 }
 

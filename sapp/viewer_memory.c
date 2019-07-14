@@ -2,7 +2,9 @@
  * Global memory manager implementation
  */
 #include "viewer_memory.h"
-#include  <assert.h>
+
+#include <malloc.h>
+#include <assert.h>
 
 /**
  * Bit scan forward - Count trailing zeroes

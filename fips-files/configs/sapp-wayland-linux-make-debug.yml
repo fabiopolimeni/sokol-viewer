@@ -1,0 +1,8 @@
+---
+platform: linux 
+generator: Unix Makefiles 
+build_tool: make
+build_type: Debug
+defines:
+    SOKOL_USE_WAYLAND: ON
+    SOKOL_USE_GLES3: ON

@@ -31,14 +31,6 @@
 #define STATS_FRAMES 60
 #define MAX_BOXES 10
 
-// create a checkerboard texture 
-static uint32_t checkerboard_pixels[4*4] = {
-    0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
-    0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF, 0xFF000000,
-    0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF,
-};
-
 static inline uint32_t xorshift32(void) {
     static uint32_t x = 0x12345678;
     x ^= x<<13;
@@ -125,6 +117,11 @@ static void setup_lights() {
         .color = app.window_bkg_color,
         .intensity = 16.f
     };
+}
+
+static void update_camera() {
+    scene.camera.width = (float)sapp_width();
+    scene.camera.height = (float)sapp_height();
 }
 
 static void update_lights() {
@@ -374,6 +371,7 @@ void init(void) {
 }
 
 void update() {
+    update_camera();
     update_lights();
     update_scene();
 }
@@ -665,7 +663,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .fail_cb = fail,
         .width = 800,
         .height = 540,
-        .high_dpi = true,
+        .high_dpi = false,
         .gl_force_gles2 = false,
         .swap_interval = app.swap_interval,
         .window_title = "Viewer (sokol app)",

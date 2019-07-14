@@ -143,13 +143,13 @@ static void sa_imgui_draw_stats_content(sa_imgui_t* ctx) {
         ctx->app->stats->total_update_time / ctx->app->stats->max_frames;
     sprintf(label_time, "Update: %2.2fms", update_time * 1000.f);
     ImGui::PlotLines(label_time, ctx->stats.update_times_arr, n_frames,
-        0, '\0', 0.0f, 0.033f);
+        0, NULL, 0.0f, 0.033f);
 
     float render_time =
         ctx->app->stats->total_render_time / ctx->app->stats->max_frames;
     sprintf(label_time, "Render: %2.2fms", render_time * 1000.f);
     ImGui::PlotLines(label_time, ctx->stats.render_times_arr, n_frames,
-        0, '\0', 0.0f, 0.033f);
+        0, NULL, 0.0f, 0.033f);
 
     if (ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Custom",       NULL, ctx->stats.corner == -1))

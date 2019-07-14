@@ -4,6 +4,7 @@
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define HANDLE_INVALID_ID (-1)
 
@@ -15,7 +16,7 @@ struct handle_t {
     int32_t id;
 };
 
-bool handle_is_valid(struct handle_t handle, size_t max_count);
+bool handle_is_valid(struct handle_t handle, int32_t max_count);
 
 #define TRACE_MAX_NAME_CHARS 32
 

@@ -4,6 +4,7 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
 
 /**
  * Memory will always be allocated with MEMORY_DEFAULT_ALIGNMENT

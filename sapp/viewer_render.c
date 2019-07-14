@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-const static draw_call_t draw_call_empty = {0};
+static const draw_call_t draw_call_empty = {0};
 
 void draw_call_reset(draw_call_t* dc) {
     memcpy(dc, &draw_call_empty, sizeof(draw_call_t));

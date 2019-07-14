@@ -53,7 +53,7 @@ void sgui_setup(int sample_count, float dpi_scale, const sgui_desc_t** descs) {
         sgui_descs[sgui_desc_count] = *(descs[sgui_desc_count]);
     }
 
-    fprintf(stdout, "SGUI: Added %lld sgui_desc_t\n", sgui_desc_count);
+    fprintf(stdout, "SGUI: Added %zu sgui_desc_t\n", sgui_desc_count);
     SGUI_CALL_DESC_FUNC(init_cb)
 
     // setup the sokol-imgui utility header

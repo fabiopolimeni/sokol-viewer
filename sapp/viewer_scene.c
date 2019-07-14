@@ -8,11 +8,11 @@
 extern "C" {
 #endif
 
-static const transform_t transform_default = {
-    .position = {0.f,0.f,0.f},
-    .scale = {1.f,1.f,1.f},
-    .rotation = {0.f,0.f,0.f,1.f},
-};
+// static const transform_t transform_default = {
+//     .position = {0.f,0.f,0.f},
+//     .scale = {1.f,1.f,1.f},
+//     .rotation = {0.f,0.f,0.f,1.f},
+// };
 
 static const node_t node_empty = {
     .transform = {
