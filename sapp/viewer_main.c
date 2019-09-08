@@ -249,7 +249,7 @@ static int32_t destroy_box(int32_t box_id, bool recursive) {
     if (box_id < MAX_BOXES) {
         scene_remove_node(&scene, box_node_ids[box_id], recursive);
 
-        // iterate throught the box nodes to check whether
+        // iterate through the box nodes to check whether
         // the pointed node is still alive or not, as it can
         // have been removed by the routine, and therefore it
         // needs to be cleared up from the boxes array.
@@ -663,7 +663,9 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .fail_cb = fail,
         .width = 800,
         .height = 540,
-        .high_dpi = false,
+        .sample_count = 16,
+        // .high_dpi = true,
+        // .fullscreen = true,
         .gl_force_gles2 = false,
         .swap_interval = app.swap_interval,
         .window_title = "Viewer (sokol app)",
