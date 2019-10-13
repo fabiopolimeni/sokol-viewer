@@ -25,11 +25,9 @@ bool file_exists(const char* filename) {
 }
 
 file_t file_open(const char* filename, uint8_t options) {
-    FILE* fd = NULL;
-
     // this is the only case not taken into account by the fopen, that is,
     // when we want to read from a file, and create it if it doesn't exist.
-    if ((options & FILE_OPEN_CREATE|FILE_OPEN_READ) == options) {
+    if ((options & (FILE_OPEN_CREATE|FILE_OPEN_READ)) == options) {
         FILE* temp_fd = fopen(filename, "rb");
         if (!temp_fd) {
             temp_fd = fopen(filename, "wb");

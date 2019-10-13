@@ -10,8 +10,6 @@
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 
-#include "cute_path.h"
-
 #include "ui/sgui.h"
 #include "ui/sgui_gfx.h"
 #include "ui/sgui_app.h"
@@ -22,6 +20,7 @@
 #include "viewer_render.h"
 #include "viewer_scene.h"
 #include "viewer_file.h"
+#include "viewer_path.h"
 #include "viewer_geometry_pass.h"
 #include "viewer_memory.h"
 #include "viewer_wavefront.h"
