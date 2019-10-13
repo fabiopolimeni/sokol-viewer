@@ -508,7 +508,7 @@ static void renderer_pass_setup(const geometry_pass_t* geometry_pass,
         },
         .blend = {
             .enabled = true,
-            .depth_format = SG_PIXELFORMAT_DEPTHSTENCIL,
+            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
             .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
             .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
             .src_factor_alpha = SG_BLENDFACTOR_ONE,
